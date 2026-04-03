@@ -578,7 +578,7 @@ FINALIZE_SPRINT
         gr.HTML("""
         <div style="text-align:center;padding:16px;color:#334155;font-size:0.75rem;border-top:1px solid #1e293b;margin-top:16px;">
             SprintBoard · OpenEnv RL Environment · 15 Tasks · 3-Axis Deterministic Grading ·
-            <a href="https://github.com/meta-pytorch/OpenEnv" style="color:#7c3aed;">OpenEnv Spec</a>
+            <a href="https://github.com/meta-pytorch/OpenEnv" target="_blank" style="color:#7c3aed;">OpenEnv Spec</a>
         </div>
         """)
 
