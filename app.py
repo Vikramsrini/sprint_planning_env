@@ -555,35 +555,14 @@ def build_ui():
                     size="lg",
                 )
 
-                # When Execute is clicked, first build the command, then execute it
-                btn_exec.click(
-                    fn=build_command,
-                    inputs=[action_type, story_dd, dev_dd, pts_dd, priority_dd],
-                    outputs=cmd_input,
-                )
-
                 # Quick command buttons (one-click investigation)
                 gr.Markdown("**⚡ Quick Investigation:**")
                 with gr.Row():
-                    for label, cmd in [
-                        ("📋 Backlog", "LIST_BACKLOG"),
-                        ("👥 Team", "VIEW_TEAM"),
-                        ("📈 Velocity", "VIEW_VELOCITY"),
-                        ("🔍 Sprint", "VIEW_SPRINT"),
-                        ("🐛 Bugs", "VIEW_BUGS"),
-                    ]:
-                        def _make_quick_fn(c):
-                            def _fn(log, env):
-                                updated_log, metrics, score, step, _ = execute_command(c, log, env)
-                                return updated_log, metrics, score, step
-                            return _fn
-
-                        q_btn = gr.Button(label, size="sm", variant="secondary")
-                        q_btn.click(
-                            fn=_make_quick_fn(cmd),
-                            inputs=[terminal_log, env_state],
-                            outputs=[terminal_log, metrics_display, score_display, step_display],
-                        )
+                    q_btn_backlog = gr.Button("📋 Backlog", size="sm", variant="secondary")
+                    q_btn_team    = gr.Button("👥 Team", size="sm", variant="secondary")
+                    q_btn_vel     = gr.Button("📈 Velocity", size="sm", variant="secondary")
+                    q_btn_sprint  = gr.Button("🔍 Sprint", size="sm", variant="secondary")
+                    q_btn_bugs    = gr.Button("🐛 Bugs", size="sm", variant="secondary")
 
                 # AI Agent row
                 gr.Markdown("**🤖 AI Agent:**")
@@ -657,6 +636,7 @@ FINALIZE_SPRINT
 
         # ── Event wiring ──────────────────────────────────────────────────────
 
+        # Start Button
         def on_start(task_id, env):
             log, metrics, score, step, alert = start_task(task_id, env)
             return log, metrics, score, step, alert
@@ -679,12 +659,18 @@ FINALIZE_SPRINT
             outputs=[terminal_log, metrics_display, score_display, step_display],
         )
 
-        # Quick investigation buttons — execute directly
+        # Quick investigation buttons
         def on_quick_cmd(cmd, log, env):
             updated_log, metrics, score, step, _ = execute_command(cmd, log, env)
             return updated_log, metrics, score, step
 
-        # Reset button — create a fresh env and restart the current task
+        q_btn_backlog.click(fn=lambda l, e: on_quick_cmd("LIST_BACKLOG", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
+        q_btn_team.click(fn=lambda l, e: on_quick_cmd("VIEW_TEAM", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
+        q_btn_vel.click(fn=lambda l, e: on_quick_cmd("VIEW_VELOCITY", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
+        q_btn_sprint.click(fn=lambda l, e: on_quick_cmd("VIEW_SPRINT", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
+        q_btn_bugs.click(fn=lambda l, e: on_quick_cmd("VIEW_BUGS", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
+
+        # Reset button
         def on_reset(task_id):
             fresh_env = _make_env()
             log, metrics, score, step, alert = start_task(task_id, fresh_env)
@@ -696,7 +682,7 @@ FINALIZE_SPRINT
             outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, env_state],
         )
 
-        # Auto-Solve — stream agent commands into the UI
+        # Auto-Solve
         def on_autosolve(task_id, env):
             from sprint_planning_env.agent import run_agent
             fresh_env = _make_env()
@@ -709,7 +695,7 @@ FINALIZE_SPRINT
             outputs=[terminal_log, metrics_display, score_display, step_display, env_state],
         )
 
-        # Benchmark All 15 Tasks — run agent on every task, show leaderboard
+        # Benchmark
         def on_benchmark():
             import time as _time
             from sprint_planning_env.agent import run_agent
@@ -726,30 +712,22 @@ FINALIZE_SPRINT
             for tid in sorted(TASK_REGISTRY.keys()):
                 task = TASK_REGISTRY[tid]
                 fresh_env = _make_env()
-                # Run agent to completion, collect final state
                 final_log = ""
                 final_score = "..."
                 for l, m, s, st in run_agent(fresh_env, tid):
                     final_log = l
                     final_score = s
-
-                # Extract grade from the environment
                 grade = 0.0
                 if fresh_env.board.is_finalized:
                     grade = fresh_env.state.grader_score or 0.0
-
                 emoji = "🟢" if grade >= 0.8 else ("🟡" if grade >= 0.5 else "🔴")
                 results.append((tid, task["name"], grade))
-
                 row = f"  {emoji} {tid:<8}  {task['name']:<30}  {int(grade*100):>3}%\n"
                 log += row
-
-                # Yield progress so the user sees it build up
                 avg = sum(r[2] for r in results) / len(results)
                 summary = f"\n{'─'*50}\n  Tasks: {len(results)}/15  |  Avg Score: {int(avg*100)}%\n"
                 yield log + summary, _format_metrics({}), _format_score_initial(), f"Benchmarking {len(results)}/15"
 
-            # Final summary
             avg = sum(r[2] for r in results) / len(results)
             perfect = sum(1 for r in results if r[2] >= 0.8)
             log += (
