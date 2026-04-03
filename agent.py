@@ -139,10 +139,14 @@ def run_agent(env, task_id: str, max_steps: int = 15):
 
     _obs = None
     _step = 0
+    finalized_already = False
     for step in range(1, max_steps + 1):
         cmd = bot.next_command()
         if not cmd:
             break
+
+        if cmd == "FINALIZE_SPRINT":
+            finalized_already = True
 
         obs = env.step(SprintAction(command=cmd))
         _obs = obs
@@ -150,34 +154,32 @@ def run_agent(env, task_id: str, max_steps: int = 15):
         entry = f"\n{'─'*40}\n$ {cmd}\n{obs.command_output or obs.error or ''}\n"
 
         if obs.done:
-            grade = obs.metadata.get("grader_score", 0.0) or 0.0
-            pct = int(grade * 100)
-            entry += (
-                f"\n{'═'*40}\n"
-                f"  EPISODE COMPLETE\n"
-                f"  🏆 FINAL SCORE: {pct}%\n"
-                f"{'═'*40}\n"
-            )
             accumulated_log += entry
-            yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
-            return  # already finalized — skip the forced step below
+            break # Exit loop to handle finalization/summary logic
 
         accumulated_log += entry
         yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
         time.sleep(0.4)
 
-    # ── Force FINALIZE_SPRINT so the summary is always shown ──────────────────
-    time.sleep(0.3)
-    obs = env.step(SprintAction(command="FINALIZE_SPRINT"))
+    # ── Force FINALIZE_SPRINT if not already done, so the summary is always shown ──────────────────
+    if not finalized_already:
+        time.sleep(0.3)
+        obs = env.step(SprintAction(command="FINALIZE_SPRINT"))
+    else:
+        obs = _obs
+        
     grade = obs.metadata.get("grader_score", 0.0) or 0.0
     pct = int(grade * 100)
-    entry = (
-        f"\n{'─'*40}\n$ FINALIZE_SPRINT\n"
-        f"{obs.command_output or obs.error or ''}\n"
+    
+    if not finalized_already:
+        entry = f"\n{'─'*40}\n$ FINALIZE_SPRINT\n{obs.command_output or obs.error or ''}\n"
+        accumulated_log += entry
+        
+    final_entry = (
         f"\n{'═'*40}\n"
         f"  EPISODE COMPLETE\n"
         f"  🏆 FINAL SCORE: {pct}%\n"
         f"{'═'*40}\n"
     )
-    accumulated_log += entry
+    accumulated_log += final_entry
     yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {_step + 1}/{max_steps}")
