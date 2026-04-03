@@ -573,12 +573,6 @@ def build_ui():
                         size="lg",
                         elem_id="btn-autosolve",
                     )
-                    btn_benchmark = gr.Button(
-                        "🏆  Benchmark All 15 Tasks",
-                        variant="secondary",
-                        size="lg",
-                        elem_id="btn-benchmark",
-                    )
 
             # ── RIGHT PANEL ────────────────────────────────
             with gr.Column(scale=1, min_width=240):
@@ -695,55 +689,6 @@ FINALIZE_SPRINT
             outputs=[terminal_log, metrics_display, score_display, step_display, env_state],
         )
 
-        # Benchmark
-        def on_benchmark():
-            import time as _time
-            from sprint_planning_env.agent import run_agent
-            from sprint_planning_env.server.tasks import TASK_REGISTRY
-
-            header = (
-                "╔════════════════════════════════════════════════╗\n"
-                "║   🏆  BENCHMARK — All 15 Tasks                 ║\n"
-                "╚════════════════════════════════════════════════╝\n\n"
-            )
-            results = []
-            log = header
-
-            for tid in sorted(TASK_REGISTRY.keys()):
-                task = TASK_REGISTRY[tid]
-                fresh_env = _make_env()
-                final_log = ""
-                final_score = "..."
-                for l, m, s, st in run_agent(fresh_env, tid):
-                    final_log = l
-                    final_score = s
-                grade = 0.0
-                if fresh_env.board.is_finalized:
-                    grade = fresh_env.state.grader_score or 0.0
-                emoji = "🟢" if grade >= 0.8 else ("🟡" if grade >= 0.5 else "🔴")
-                results.append((tid, task["name"], grade))
-                row = f"  {emoji} {tid:<8}  {task['name']:<30}  {int(grade*100):>3}%\n"
-                log += row
-                avg = sum(r[2] for r in results) / len(results)
-                summary = f"\n{'─'*50}\n  Tasks: {len(results)}/15  |  Avg Score: {int(avg*100)}%\n"
-                yield log + summary, _format_metrics({}), _format_score_initial(), f"Benchmarking {len(results)}/15"
-
-            avg = sum(r[2] for r in results) / len(results)
-            perfect = sum(1 for r in results if r[2] >= 0.8)
-            log += (
-                f"\n{'═'*50}\n"
-                f"  📊 FINAL RESULTS\n"
-                f"  Average Score : {int(avg*100)}%\n"
-                f"  Perfect (≥80%): {perfect}/15\n"
-                f"{'═'*50}\n"
-            )
-            yield log, _format_metrics({}), _format_score_initial(), "Benchmark Complete ✅"
-
-        btn_benchmark.click(
-            fn=on_benchmark,
-            inputs=[],
-            outputs=[terminal_log, metrics_display, score_display, step_display],
-        )
 
     return demo
 
