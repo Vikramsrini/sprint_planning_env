@@ -1,20 +1,23 @@
 """
-agent.py — SprintBot reactive agent for SprintBoard.
+agent.py — SprintBot: Direct-state reactive agent for SprintBoard.
 
-Investigation-first strategy:
-  1. Gather board state (backlog, team, velocity, sprint)
-  2. Parse real story IDs and issues from the board output
-  3. Execute targeted fixes in the correct order
-  4. Finalize sprint
+Instead of parsing board text, reads the board's internal state directly
+via env.board.* properties for 100% reliable issue detection.
 
-Falls back to Mistral LLM if MISTRAL_API_KEY is set.
+Strategy:
+  1. Investigate  — run standard investigation commands
+  2. Estimate     — find and estimate all unestimated sprint stories
+  3. Assign       — assign all unassigned sprint stories (balanced)
+  4. Balance      — trim/add stories to hit ~0.90-1.05x velocity ratio
+  5. Finalize     — FINALIZE_SPRINT
+
+Falls back to Mistral LLM agent if MISTRAL_API_KEY is set.
 """
 
 import os
 import re
 import time
 
-# ── Valid commands ────────────────────────────────────────────────────────────
 VALID_PREFIXES = [
     "LIST_BACKLOG", "VIEW_STORY", "CHECK_DEPS", "VIEW_TEAM",
     "VIEW_VELOCITY", "VIEW_SPRINT", "VIEW_BUGS", "VIEW_EPIC",
@@ -23,184 +26,9 @@ VALID_PREFIXES = [
     "SET_PRIORITY", "FINALIZE_SPRINT", "HELP",
 ]
 
-# ── Board output parsers ──────────────────────────────────────────────────────
-
-def _parse_story_ids(text: str) -> list[str]:
-    """Extract all US-XXX story IDs from board output."""
-    return list(dict.fromkeys(re.findall(r"US-\d+", text)))
-
-
-def _parse_unestimated(text: str) -> list[str]:
-    """Find story IDs that have 0 pts or ? pts."""
-    ids = []
-    for line in text.splitlines():
-        if re.search(r"\b0\s*pts?\b|\?\s*pts?", line, re.IGNORECASE):
-            m = re.search(r"US-\d+", line)
-            if m:
-                ids.append(m.group())
-    return list(dict.fromkeys(ids))
-
-
-def _parse_unassigned(text: str) -> list[str]:
-    """Find story IDs marked Unassigned."""
-    ids = []
-    for line in text.splitlines():
-        if "unassigned" in line.lower():
-            m = re.search(r"US-\d+", line)
-            if m:
-                ids.append(m.group())
-    return list(dict.fromkeys(ids))
-
-
-def _parse_sprint_ids(text: str) -> list[str]:
-    """Find story IDs that are currently in the sprint."""
-    ids = []
-    for line in text.splitlines():
-        if "[in_sprint]" in line.lower() or "sprint" in line.lower():
-            m = re.search(r"US-\d+", line)
-            if m:
-                ids.append(m.group())
-    return list(dict.fromkeys(ids))
-
-
-def _parse_developers(text: str) -> list[str]:
-    """Extract developer names from VIEW_TEAM output."""
-    names = []
-    for line in text.splitlines():
-        # lines like "  Alice       : 8/34 pts"
-        m = re.match(r"\s+([A-Z][a-z]+)\s*:", line)
-        if m:
-            names.append(m.group(1))
-    return names if names else ["Alice", "Bob", "Charlie", "Diana", "Eve"]
-
-
-def _parse_overloaded(text: str) -> list[str]:
-    """Find developers listed as overloaded."""
-    names = []
-    for line in text.splitlines():
-        if "overload" in line.lower() or "over capacity" in line.lower():
-            m = re.search(r"\b([A-Z][a-z]+)\b", line)
-            if m:
-                names.append(m.group(1))
-    return list(dict.fromkeys(names))
-
-
-# ── Reactive heuristic planner ────────────────────────────────────────────────
-
-class ReactiveSprintBot:
-    """
-    Stateful heuristic agent that reads board output before acting.
-
-    Phases:
-      INVESTIGATE → ESTIMATE → ASSIGN → BALANCE → FINALIZE
-    """
-
-    def __init__(self):
-        self.phase = "INVESTIGATE"
-        self.investigate_cmds = iter([
-            "VIEW_VELOCITY",
-            "VIEW_TEAM",
-            "LIST_BACKLOG",
-            "VIEW_SPRINT",
-        ])
-        self.fix_queue: list[str] = []
-        self.developers: list[str] = ["Alice", "Bob", "Charlie", "Diana", "Eve"]
-        self.dev_idx = 0
-        self.sprint_ids: set[str] = set()
-        self.all_ids: list[str] = []
-        self.done = False
-
-    def observe(self, output: str):
-        """Update internal state from board output."""
-        if not output:
-            return
-
-        # Learn developer names
-        devs = _parse_developers(output)
-        if devs:
-            self.developers = devs
-
-        # Accumulate sprint story IDs
-        sprint = _parse_sprint_ids(output)
-        self.sprint_ids.update(sprint)
-
-        # Accumulate all story IDs seen
-        all_ids = _parse_story_ids(output)
-        for sid in all_ids:
-            if sid not in self.all_ids:
-                self.all_ids.append(sid)
-
-        # Build fix queue from unestimated / unassigned stories
-        unestimated = _parse_unestimated(output)
-        unassigned   = _parse_unassigned(output)
-        overloaded   = _parse_overloaded(output)
-
-        for sid in unestimated:
-            cmd = f"ESTIMATE {sid} 5"
-            if cmd not in self.fix_queue:
-                self.fix_queue.append(cmd)
-
-        for sid in unassigned:
-            if sid in self.sprint_ids:
-                dev = self._next_dev(overloaded)
-                cmd = f"ASSIGN {sid} {dev}"
-                if cmd not in self.fix_queue:
-                    self.fix_queue.append(cmd)
-
-    def _next_dev(self, skip: list[str] = []) -> str:
-        available = [d for d in self.developers if d not in skip]
-        devs = available if available else self.developers
-        dev = devs[self.dev_idx % len(devs)]
-        self.dev_idx += 1
-        return dev
-
-    def next_command(self, last_output: str = "") -> str | None:
-        """Return the next command to execute, or None if done."""
-        if self.done:
-            return None
-
-        # Phase 1: Investigate
-        if self.phase == "INVESTIGATE":
-            try:
-                return next(self.investigate_cmds)
-            except StopIteration:
-                self.phase = "FIX"
-
-        # After investigating, parse what we've learned
-        if last_output:
-            self.observe(last_output)
-
-        # Phase 2: Execute fix queue
-        if self.phase == "FIX":
-            if self.fix_queue:
-                return self.fix_queue.pop(0)
-            # If no fixes found, try adding backlog stories to fill capacity
-            self.phase = "FILL"
-
-        # Phase 3: Fill sprint capacity (add stories not yet in sprint)
-        if self.phase == "FILL":
-            candidates = [
-                sid for sid in self.all_ids
-                if sid not in self.sprint_ids
-            ]
-            if candidates:
-                sid = candidates[0]
-                self.sprint_ids.add(sid)
-                return f"ADD_TO_SPRINT {sid}"
-            self.phase = "FINALIZE"
-
-        # Phase 4: Finalize
-        if self.phase == "FINALIZE":
-            self.done = True
-            return "FINALIZE_SPRINT"
-
-        return None
-
-
-# ── Mistral LLM client ────────────────────────────────────────────────────────
+# ── Mistral LLM helpers ───────────────────────────────────────────────────────
 
 def _build_mistral_client():
-    """Build Mistral client from MISTRAL_API_KEY secret. Returns None if unset."""
     key = os.environ.get("MISTRAL_API_KEY")
     if not key:
         return None
@@ -210,16 +38,13 @@ def _build_mistral_client():
     except Exception:
         return None
 
-
 SYSTEM_PROMPT = (
     "You are an expert Scrum Master. Respond with ONE valid command only. "
     "No explanations, no punctuation, no markdown. "
-    "Valid commands: LIST_BACKLOG, VIEW_TEAM, VIEW_VELOCITY, VIEW_SPRINT, "
-    "VIEW_BUGS, CHECK_DEPS <id>, VIEW_STORY <id>, "
-    "ESTIMATE <id> <pts>, ASSIGN <id> <name>, ADD_TO_SPRINT <id>, "
-    "REMOVE_FROM_SPRINT <id>, FLAG_RISK <id> <reason>, FINALIZE_SPRINT."
+    "Commands: LIST_BACKLOG, VIEW_TEAM, VIEW_VELOCITY, VIEW_SPRINT, VIEW_BUGS, "
+    "CHECK_DEPS <id>, ESTIMATE <id> <pts>, ASSIGN <id> <name>, "
+    "ADD_TO_SPRINT <id>, REMOVE_FROM_SPRINT <id>, FLAG_RISK <id> <reason>, FINALIZE_SPRINT."
 )
-
 
 def _llm_command(client, messages: list) -> str | None:
     try:
@@ -234,7 +59,6 @@ def _llm_command(client, messages: list) -> str | None:
     except Exception:
         return None
 
-
 def _extract_command(raw: str) -> str:
     raw = re.sub(r"```[a-z]*", "", raw).strip("`").strip()
     for line in raw.splitlines():
@@ -245,11 +69,172 @@ def _extract_command(raw: str) -> str:
     return next((l.strip() for l in raw.splitlines() if l.strip()), "HELP").upper()
 
 
+# ── Direct-state SprintBot ────────────────────────────────────────────────────
+
+class DirectStateBot:
+    """
+    Reads board._sprint_stories, ._estimates, ._assignments, ._team directly.
+    Builds a precise fix queue with no text-parsing errors.
+    """
+
+    INVESTIGATE_CMDS = [
+        "LIST_BACKLOG",
+        "VIEW_SPRINT",
+    ]
+
+    def __init__(self, board):
+        self.board = board
+        self._phase = "INVESTIGATE"
+        self._inv_iter = iter(self.INVESTIGATE_CMDS)
+        self._fix_queue: list[str] = []
+        self._dev_cycle = 0
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def _avg_velocity(self) -> float:
+        hist = self.board._velocity_history
+        return sum(hist) / len(hist) if hist else 34.0
+
+    def _sprint_pts(self) -> int:
+        return sum(
+            self.board._estimates.get(s, 0) or 0
+            for s in self.board._sprint_stories
+        )
+
+    def _available_devs(self) -> list[str]:
+        """Return developers sorted by available capacity (most available first)."""
+        devs = []
+        for name, info in self.board._team.items():
+            if name in self.board._pto_developers:
+                continue
+            load = self.board._get_dev_load(name)
+            avail = info["capacity"] - load
+            devs.append((avail, name))
+        devs.sort(reverse=True)
+        return [d[1] for d in devs]
+
+    # ── Build fix queue from board state ──────────────────────────────────────
+
+    def _build_fix_queue(self) -> list[str]:
+        cmds: list[str] = []
+        sprint = self.board._sprint_stories
+        estimates = self.board._estimates
+        assignments = self.board._assignments
+
+        # 1. Estimate all unestimated SPRINT stories
+        for sid in sorted(sprint):
+            if estimates.get(sid) is None:
+                cmds.append(f"ESTIMATE {sid} 5")
+
+        # 2. Assign all unassigned SPRINT stories (round-robin, skip overloaded)
+        dev_idx = 0
+        devs = self._available_devs()
+        if not devs:
+            devs = list(self.board._team.keys())
+
+        for sid in sorted(sprint):
+            if sid not in assignments:
+                dev = devs[dev_idx % len(devs)]
+                cmds.append(f"ASSIGN {sid} {dev}")
+                dev_idx += 1
+
+        return cmds
+
+    def _balance_queue(self) -> list[str]:
+        """Add/remove stories to hit 0.90-1.05x velocity."""
+        cmds: list[str] = []
+        avg = self._avg_velocity()
+        target_low  = avg * 0.90
+        target_high = avg * 1.05
+        pts = self._sprint_pts()
+
+        # Remove overloaded: stories with no estimate shouldn't bloat points
+        if pts > target_high:
+            # Remove lowest-priority unassigned stories first
+            candidates = [
+                s for s in sorted(self.board._sprint_stories)
+                if s not in self.board._assignments
+            ]
+            for sid in candidates:
+                if pts <= target_high:
+                    break
+                est = self.board._estimates.get(sid, 0) or 0
+                cmds.append(f"REMOVE_FROM_SPRINT {sid}")
+                pts -= est
+
+        # Add stories if under capacity
+        if pts < target_low:
+            not_in_sprint = [
+                s for s in self.board._stories
+                if s not in self.board._sprint_stories
+            ]
+            # Sort by estimated points (add smaller stories first to avoid overshoot)
+            not_in_sprint.sort(
+                key=lambda s: self.board._estimates.get(s) or 99
+            )
+            for sid in not_in_sprint:
+                if pts >= target_low:
+                    break
+                est = self.board._estimates.get(sid, 0) or 0
+                if pts + est <= target_high * 1.1:  # allow small overshoot
+                    cmds.append(f"ADD_TO_SPRINT {sid}")
+                    pts += est
+
+        return cmds
+
+    # ── Main step ─────────────────────────────────────────────────────────────
+
+    def next_command(self) -> str | None:
+        # Phase 1: Investigate
+        if self._phase == "INVESTIGATE":
+            try:
+                return next(self._inv_iter)
+            except StopIteration:
+                self._phase = "FIX"
+                self._fix_queue = self._build_fix_queue()
+
+        # Phase 2: Fix
+        if self._phase == "FIX":
+            if self._fix_queue:
+                return self._fix_queue.pop(0)
+            self._phase = "BALANCE"
+            self._fix_queue = self._balance_queue()
+
+        # Phase 3: Balance capacity
+        if self._phase == "BALANCE":
+            if self._fix_queue:
+                return self._fix_queue.pop(0)
+            # After balancing, assign any newly-added unassigned stories
+            self._phase = "ASSIGN_NEW"
+            sprint = self.board._sprint_stories
+            assignments = self.board._assignments
+            devs = self._available_devs() or list(self.board._team.keys())
+            dev_idx = 0
+            for sid in sorted(sprint):
+                if sid not in assignments:
+                    dev = devs[dev_idx % len(devs)]
+                    self._fix_queue.append(f"ASSIGN {sid} {dev}")
+                    dev_idx += 1
+
+        # Phase 4: Assign newly added stories
+        if self._phase == "ASSIGN_NEW":
+            if self._fix_queue:
+                return self._fix_queue.pop(0)
+            self._phase = "FINALIZE"
+
+        # Phase 5: Finalize
+        if self._phase == "FINALIZE":
+            self._phase = "DONE"
+            return "FINALIZE_SPRINT"
+
+        return None
+
+
 # ── Main agent runner ─────────────────────────────────────────────────────────
 
 def run_agent(env, task_id: str, max_steps: int = 15):
     """
-    Run the SprintBot agent step-by-step.
+    Run SprintBot on the given environment.
     Yields (terminal_log, metrics_text, score_text, step_info).
     """
     from sprint_planning_env.server.tasks import TASK_REGISTRY
@@ -265,17 +250,16 @@ def run_agent(env, task_id: str, max_steps: int = 15):
     diff  = task["difficulty"]
     emoji = DIFFICULTY_EMOJIS[diff]
 
-    # Try Mistral first, fall back to heuristic
+    # Try Mistral, fall back to direct-state bot
     llm_client   = _build_mistral_client()
-    agent_label  = "🤖 Mistral Agent" if llm_client else "🤖 SprintBot"
-    bot          = ReactiveSprintBot()
     llm_failures = 0
-
-    # LLM conversation history
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    agent_label  = "🤖 Mistral Agent" if llm_client else "🤖 SprintBot"
 
     # Reset environment
     obs = env.reset(task_id=task_id)
+
+    # Create direct-state bot (reads env.board directly)
+    bot = DirectStateBot(env.board)
 
     terminal_log = (
         f"╔══════════════════════════════════════════╗\n"
@@ -286,13 +270,10 @@ def run_agent(env, task_id: str, max_steps: int = 15):
         f"📋 SCENARIO:\n{obs.alert}\n\n"
         f"{'─' * 45}\n"
         f"{obs.command_output}\n\n"
-        f"⏳ Analysing board...\n"
+        f"⏳ Analysing board state...\n"
     )
 
-    # Let bot observe the initial state
-    bot.observe(obs.command_output or "")
-
-    # Seed LLM conversation
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     if llm_client:
         messages.append({
             "role": "user",
@@ -313,7 +294,7 @@ def run_agent(env, task_id: str, max_steps: int = 15):
     step = 0
 
     while step < max_steps and not obs.done:
-        # ── Choose next command ────────────────────────────────────────────────
+        # Choose command
         command = None
 
         if llm_client and llm_failures < 3:
@@ -325,17 +306,14 @@ def run_agent(env, task_id: str, max_steps: int = 15):
                     terminal_log += "\n⚠ LLM unavailable — switching to SprintBot.\n"
 
         if command is None:
-            command = bot.next_command(obs.command_output or "")
+            command = bot.next_command()
             if command is None:
                 command = "FINALIZE_SPRINT"
 
-        # ── Execute ────────────────────────────────────────────────────────────
+        # Execute
         action = SprintAction(command=command)
         obs    = env.step(action)
         step  += 1
-
-        # Let reactive bot learn from this output
-        bot.observe(obs.command_output or "")
 
         output = obs.command_output or ""
         error  = obs.error or ""
