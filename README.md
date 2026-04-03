@@ -1,7 +1,7 @@
 ---
 title: Sprint Planning Env
 emoji: ⚡
-colorFrom: violet
+colorFrom: purple
 colorTo: indigo
 sdk: docker
 app_file: app.py
