@@ -1,15 +1,12 @@
 """
-agent.py — SprintBot Heuristic Agent for SprintBoard.
+agent.py — SprintBot agent for SprintBoard.
 
-Implements a deterministic rule-based agent that:
-  1. Investigates the board (LIST_BACKLOG, VIEW_TEAM, VIEW_VELOCITY)
-  2. Fixes issues found (estimates, assignments, load balancing)
-  3. Finalizes the sprint
+Uses Mistral API (mistral-small-latest) via MISTRAL_API_KEY secret.
+Falls back to a reliable heuristic agent if no key is set.
 
-This always works — no API keys, no rate limits, no 403 errors.
-It reliably scores 70-90% across all 15 tasks.
-
-LLM mode is available if HF_TOKEN is set and the model is accessible.
+To enable the LLM:
+  HF Spaces → Settings → Variables and Secrets → New Secret
+  Name: MISTRAL_API_KEY
 """
 
 import os
@@ -71,11 +68,23 @@ def _heuristic_plan(task_id: str) -> list[str]:
     return investigate + fix
 
 
-def _llm_plan(client, task, obs, messages: list) -> str:
-    """Try to get one command from the LLM. Returns None on failure."""
+def _build_mistral_client():
+    """Build Mistral client from MISTRAL_API_KEY secret. Returns None if not set."""
+    key = os.environ.get("MISTRAL_API_KEY")
+    if not key:
+        return None
     try:
-        response = client.chat.completions.create(
-            model="HuggingFaceH4/zephyr-7b-beta",
+        from mistralai import Mistral
+        return Mistral(api_key=key)
+    except Exception:
+        return None
+
+
+def _llm_plan(client, task, obs, messages: list) -> str:
+    """Ask Mistral for the next command. Returns None on failure."""
+    try:
+        response = client.chat.complete(
+            model="mistral-small-latest",
             messages=messages,
             max_tokens=32,
             temperature=0.1,
@@ -117,17 +126,9 @@ def run_agent(env, task_id: str, max_steps: int = 15):
     diff = task["difficulty"]
     emoji = DIFFICULTY_EMOJIS[diff]
 
-    # ── Try to set up LLM client ──────────────────────────────────────────────
-    llm_client = None
-    token = os.environ.get("HF_TOKEN")
-    if token:
-        try:
-            from huggingface_hub import InferenceClient
-            llm_client = InferenceClient(token=token)
-        except Exception:
-            pass
-
-    agent_label = "🤖 LLM Agent" if llm_client else "🤖 SprintBot (Heuristic)"
+    # ── Try to set up Mistral LLM client ─────────────────────────────────────
+    llm_client = _build_mistral_client()
+    agent_label = "🤖 Mistral Agent" if llm_client else "🤖 SprintBot (Heuristic)"
 
     # ── Reset environment ─────────────────────────────────────────────────────
     obs = env.reset(task_id=task_id)
