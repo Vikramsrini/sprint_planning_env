@@ -392,7 +392,6 @@ def _format_sprint_manifest(board) -> str:
     if not board.is_finalized:
         return "<div style='color:#64748b;text-align:center;padding:40px;'>Sprint not finalized yet. Complete your planning and click FINALIZE_SPRINT.</div>"
 
-    sprint = board.get_sprint_summary()
     stories = board._sprint_stories
     team = board._team
     assignments = board._assignments
