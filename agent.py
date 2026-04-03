@@ -1,14 +1,11 @@
 """
-agent.py — Professional Grade SprintBot.
+agent.py — Elite Skill-Aware SprintBot.
 
-High-performance heuristic agent that:
-  1. Fixes dependencies (adds missing blockers to sprint)
-  2. Resolves estimates and assignments
-  3. Balances velocity precisely
-  4. Finalizes within the 15-step limit
-
-This bot reliably scores 80-100% because it addresses the specific
-fault types (dependencies, risks, PTO) that the grader checks.
+Heuristic agent that solves the 4 'Hard' fault types:
+  1. Skill Mismatch: Matches dev skills to story requirements.
+  2. Dependencies: Pulls blockers into the sprint.
+  3. PTO: Avoids assigning work to developers on leave.
+  4. Velocity: Balances points to hit 0.9x-1.1x ratio.
 """
 
 import os
@@ -23,119 +20,106 @@ VALID_PREFIXES = [
     "SET_PRIORITY", "FINALIZE_SPRINT", "HELP",
 ]
 
-# ── Mistral LLM (Optional Bonus) ─────────────────────────────────────────────
+# ── Elite Heuristic Bot ───────────────────────────────────────────────────────
 
-def _build_mistral_client():
-    key = os.environ.get("MISTRAL_API_KEY")
-    if not key: return None
-    try:
-        from mistralai import Mistral
-        return Mistral(api_key=key)
-    except: return None
-
-def _llm_command(client, messages: list) -> str | None:
-    try:
-        response = client.chat.complete(
-            model="mistral-small-latest",
-            messages=messages,
-            max_tokens=32,
-            temperature=0.1,
-        )
-        raw = response.choices[0].message.content.strip()
-        return _extract_command(raw)
-    except: return None
-
-def _extract_command(raw: str) -> str:
-    raw = re.sub(r"```[a-z]*", "", raw).strip("`").strip()
-    for line in raw.splitlines():
-        line = line.strip().strip("`").strip("*").strip()
-        for prefix in VALID_PREFIXES:
-            if line.upper().startswith(prefix): return line
-    return next((l.strip() for l in raw.splitlines() if l.strip()), "HELP").upper()
-
-
-# ── Professional Heuristic Bot ───────────────────────────────────────────────
-
-class ProSprintBot:
+class EliteSprintBot:
     def __init__(self, board):
         self.board = board
         self._phase = "INVESTIGATE"
-        self._queue: list[str] = ["LIST_BACKLOG", "VIEW_SPRINT"]
+        self._queue: list[str] = ["LIST_BACKLOG", "VIEW_TEAM", "VIEW_SPRINT"]
         self._done = False
 
     def _get_avg_velocity(self):
         h = self.board._velocity_history
         return sum(h)/len(h) if h else 34.0
 
+    def _find_best_dev(self, story_id, skip_overloaded=True):
+        """Find a dev whose skills match the story and isn't on PTO."""
+        story = self.board._stories.get(story_id, {})
+        req_skills = set(story.get("skills_required", []))
+        
+        candidates = []
+        for name, info in self.board._team.items():
+            if name in self.board._pto_developers: continue
+            
+            # Score the dev based on skill match
+            dev_skills = set(info.get("skills", []))
+            match_score = len(req_skills.intersection(dev_skills))
+            
+            load = self.board._get_dev_load(name)
+            cap = info["capacity"]
+            
+            if skip_overloaded and load >= cap: continue
+            candidates.append((match_score, cap - load, name))
+        
+        if not candidates: return "Alice" # Fallback
+        # Sort by match score (desc) then by available capacity (desc)
+        candidates.sort(key=lambda x: (-x[0], -x[1]))
+        return candidates[0][2]
+
     def next_command(self) -> str | None:
         if self._done: return None
+        if self._queue: return self._queue.pop(0)
 
-        # 1. Exhaust the current queue
-        if self._queue:
-            return self._queue.pop(0)
+        sprint = self.board._sprint_stories
+        avg = self._get_avg_velocity()
 
-        # 2. Transition Phases & Build Next Queues
+        # ── Phase Transitions ────────────────────────────────────────────────
         if self._phase == "INVESTIGATE":
-            self._phase = "RESOLVE_DEPS"
-            # Solve dependencies first: if A is in sprint but its dep B isn't, add B
-            sprint = self.board._sprint_stories
+            self._phase = "FIX_DEPS"
             for sid in sorted(sprint):
-                story = self.board._stories.get(sid, {})
-                for dep in story.get("dependencies", []):
+                for dep in self.board._stories.get(sid, {}).get("dependencies", []):
                     if dep not in sprint:
                         self._queue.append(f"ADD_TO_SPRINT {dep}")
-            
-            if self._queue: return self.next_command()
+            return self.next_command()
 
-        if self._phase == "RESOLVE_DEPS":
+        if self._phase == "FIX_DEPS":
             self._phase = "ESTIMATE"
-            # Estimate all unestimated items in sprint
-            for sid in sorted(self.board._sprint_stories):
+            for sid in sorted(sprint):
                 if self.board._estimates.get(sid) is None:
                     self._queue.append(f"ESTIMATE {sid} 5")
-            
-            if self._queue: return self.next_command()
+            return self.next_command()
 
         if self._phase == "ESTIMATE":
+            self._phase = "SKILL_CHECK"
+            # Crucial for Task 7: Unassign if there is a skill mismatch
+            for sid in sorted(sprint):
+                dev_name = self.board._assignments.get(sid)
+                if dev_name:
+                    story = self.board._stories.get(sid, {})
+                    req_skills = set(story.get("skills_required", []))
+                    dev_skills = set(self.board._team.get(dev_name, {}).get("skills", []))
+                    if req_skills and not req_skills.intersection(dev_skills):
+                        self._queue.append(f"UNASSIGN {sid}")
+            return self.next_command()
+
+        if self._phase == "SKILL_CHECK":
             self._phase = "ASSIGN"
-            # Assign all unassigned items in sprint
-            devs = [n for n in self.board._team if n not in self.board._pto_developers]
-            if not devs: devs = list(self.board._team.keys())
-            
-            dev_idx = 0
-            for sid in sorted(self.board._sprint_stories):
+            # Assign anything unassigned using skill matching
+            for sid in sorted(sprint):
                 if sid not in self.board._assignments:
-                    self._queue.append(f"ASSIGN {sid} {devs[dev_idx % len(devs)]}")
-                    dev_idx += 1
-            
-            if self._queue: return self.next_command()
+                    best_dev = self._find_best_dev(sid)
+                    self._queue.append(f"ASSIGN {sid} {best_dev}")
+            return self.next_command()
 
         if self._phase == "ASSIGN":
             self._phase = "BALANCE"
-            # Final balancing to hit velocity target
-            pts = sum(self.board._estimates.get(s, 0) or 0 for s in self.board._sprint_stories)
-            avg = self._get_avg_velocity()
-            
-            # 1. If way OVER capacity, remove stories
+            pts = sum(self.board._estimates.get(s, 0) or 0 for s in sprint)
             if pts > avg * 1.1:
-                to_remove = sorted(self.board._sprint_stories, reverse=True)
-                for sid in to_remove:
+                for sid in sorted(sprint, reverse=True):
                     if pts <= avg * 1.05: break
                     pts -= (self.board._estimates.get(sid, 0) or 0)
                     self._queue.append(f"REMOVE_FROM_SPRINT {sid}")
-            
-            # 2. If way UNDER capacity, add stories from backlog
             elif pts < avg * 0.9:
-                # Get stories NOT in sprint, but have estimates
-                backlog = [sid for sid in self.board._stories if sid not in self.board._sprint_stories]
-                # Sort by ID or default priority to pick 'best' ones
+                backlog = [s for s in self.board._stories if s not in sprint]
                 for sid in sorted(backlog):
                     if pts >= avg * 0.95: break
-                    est = self.board._estimates.get(sid, 0) or 5 # Default to 5 if none
                     self._queue.append(f"ADD_TO_SPRINT {sid}")
-                    pts += est
-
-            if self._queue: return self.next_command()
+                    pts += (self.board._estimates.get(sid, 0) or 5)
+            # If we added/removed anything, we need to re-assign/unassign in next step
+            if self._queue: 
+                self._phase = "SKILL_CHECK" # Loop back to ensure new stories get assigned
+            return self.next_command()
 
         if self._phase == "BALANCE":
             self._phase = "FINISH"
@@ -148,35 +132,24 @@ class ProSprintBot:
 def run_agent(env, task_id: str, max_steps: int = 15):
     from sprint_planning_env.server.tasks import TASK_REGISTRY
     from sprint_planning_env.models import SprintAction
-    from sprint_planning_env.app import _format_metrics, _format_score, _format_score_initial, DIFFICULTY_EMOJIS
+    from sprint_planning_env.app import _format_metrics, _format_score, _format_score_initial
 
     task = TASK_REGISTRY[task_id]
-    obs = env.reset(task_id=task_id)
+    env.reset(task_id=task_id)
+    bot = EliteSprintBot(env.board)
     
-    llm_client = _build_mistral_client()
-    bot = ProSprintBot(env.board)
-    agent_label = "🤖 Mistral Agent" if llm_client else "🤖 Pro SprintBot"
+    yield ("🤖 Elite SprintBot starting...\n", _format_metrics(env.board.get_metrics()), _format_score_initial(), "Step 0/15")
 
-    terminal_log = f"╔══════════════════════════════════════════╗\n║  {agent_label:<41}║\n╚══════════════════════════════════════════╝\n\n📋 SCENARIO:\n{obs.alert}\n\n"
-    
-    yield (terminal_log, _format_metrics(obs.metrics), _format_score_initial(), f"Step 0 / {obs.max_steps}")
-
-    step = 0
-    msgs = [{"role": "system", "content": "Expert Scrum Master. One command results only."}]
-
-    while step < max_steps and not obs.done:
-        command = _llm_command(llm_client, msgs) if llm_client else bot.next_command()
-        if not command: command = "FINALIZE_SPRINT"
-
-        action = SprintAction(command=command)
-        obs = env.step(action)
-        step += 1
-
-        new_entry = f"\n{'─' * 45}\n$ {command}\n{obs.command_output or obs.error or ''}\n"
+    for step in range(1, max_steps + 1):
+        cmd = bot.next_command() or "FINALIZE_SPRINT"
+        obs = env.step(SprintAction(command=cmd))
+        
+        log = f"\n{'-'*40}\n$ {cmd}\n{obs.command_output or obs.error or ''}\n"
         if obs.done:
             grade = obs.metadata.get("grader_score", 0.0) or 0.0
-            new_entry += f"\n🏆 FINAL SCORE: {int(grade*100)}%\n"
-
-        terminal_log += new_entry
-        yield (terminal_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {obs.step_number} / {max_steps}")
+            log += f"\n🏆 FINAL SCORE: {int(grade*100)}%\n"
+            yield (log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
+            break
+        
+        yield (log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
         time.sleep(0.5)
