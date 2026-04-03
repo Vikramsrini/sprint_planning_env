@@ -389,11 +389,17 @@ def _format_score_initial() -> str:
 
 def _format_sprint_manifest(board) -> str:
     """Create a beautiful HTML manifest of the final sprint plan."""
-    # Show manifest if finalized OR if it's an 'automated' finish (e.g. Task 1)
-    # We can detect 'finished' by checking if grader_score is set in the state.
+    # Show manifest if finalized OR if the plan is essentially "complete" (estimated + assigned)
     is_done = getattr(board, "is_finalized", False)
     
-    if not is_done:
+    # Heuristic: if everything in the sprint is estimated and assigned, it's a "complete" plan
+    # even if FINALIZE_SPRINT wasn't called (e.g. environment auto-resolved)
+    metrics = board.get_metrics()
+    is_auto_resolved = (metrics.get("unestimated_count", 0) == 0 and 
+                       metrics.get("unassigned_count", 0) == 0 and
+                       metrics.get("sprint_stories", 0) > 0)
+
+    if not is_done and not is_auto_resolved:
         return "<div style='color:#64748b;text-align:center;padding:40px;'>Sprint not finalized yet. Complete your planning and click FINALIZE_SPRINT.</div>"
 
     stories = board._sprint_stories
