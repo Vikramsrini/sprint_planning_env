@@ -285,6 +285,11 @@ class SprintBoardEnvironment(Environment[SprintAction, SprintObservation, Sprint
         """Clean up resources."""
         pass  # No external resources to clean up (no DB connections)
 
+    @property
+    def board(self) -> ProjectBoard:
+        """Public accessor for the project board (for direct-state agents)."""
+        return self._board
+
     # ── Internal helpers ─────────────────────────────────────────
 
     def _check_resolved(self) -> bool:
