@@ -4,3 +4,4 @@ fastapi
 uvicorn[standard]
 pydantic>=2.0
 openai
+huggingface_hub>=0.22.0

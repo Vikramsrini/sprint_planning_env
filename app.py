@@ -518,6 +518,15 @@ def build_ui():
                             outputs=cmd_input,
                         )
 
+                # Auto-Solve
+                gr.Markdown("**AI Agent:**")
+                btn_autosolve = gr.Button(
+                    "🤖  Auto-Solve with AI",
+                    variant="primary",
+                    size="lg",
+                    elem_id="btn-autosolve",
+                )
+
             # ── RIGHT PANEL ────────────────────────────────
             with gr.Column(scale=1, min_width=240):
                 gr.Markdown("### 🏆 Score")
@@ -610,6 +619,20 @@ FINALIZE_SPRINT
             fn=on_reset,
             inputs=[task_selector],
             outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, cmd_input, env_state],
+        )
+
+        # Auto-Solve — stream agent commands into the UI
+        def on_autosolve(task_id, env):
+            from sprint_planning_env.agent import run_agent
+            # Reset the environment first so agent starts fresh
+            fresh_env = _make_env()
+            for log, metrics, score, step in run_agent(fresh_env, task_id):
+                yield log, metrics, score, step, fresh_env
+
+        btn_autosolve.click(
+            fn=on_autosolve,
+            inputs=[task_selector, env_state],
+            outputs=[terminal_log, metrics_display, score_display, step_display, env_state],
         )
 
     return demo
