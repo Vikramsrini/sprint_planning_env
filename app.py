@@ -484,49 +484,122 @@ def build_ui():
                     autoscroll=True,
                 )
 
-                gr.Markdown("### ⌨️ Enter Command")
+                # ── Interactive Action Builder ──
+                gr.Markdown("### 🎮 Action Builder")
                 with gr.Row():
-                    cmd_input = gr.Textbox(
-                        placeholder="e.g.  VIEW_TEAM  or  ASSIGN US-101 Alice  or  HELP",
-                        label="",
-                        lines=1,
-                        max_lines=1,
-                        scale=4,
+                    action_type = gr.Dropdown(
+                        choices=[
+                            "LIST_BACKLOG", "VIEW_TEAM", "VIEW_VELOCITY",
+                            "VIEW_SPRINT", "VIEW_BUGS", "CHECK_DEPS",
+                            "VIEW_STORY", "ESTIMATE", "ASSIGN", "UNASSIGN",
+                            "ADD_TO_SPRINT", "REMOVE_FROM_SPRINT",
+                            "FLAG_RISK", "SET_PRIORITY", "FINALIZE_SPRINT",
+                        ],
+                        value="LIST_BACKLOG",
+                        label="Action",
+                        scale=2,
                         interactive=True,
-                        elem_id="cmd-input",
-                        show_label=False,
                     )
-                    btn_exec = gr.Button(
-                        "Execute ▶",
+                    story_dd = gr.Dropdown(
+                        choices=[f"US-{i}" for i in range(101, 121)],
+                        label="Story ID",
                         scale=1,
-                        variant="primary",
-                        elem_id="btn-execute",
+                        interactive=True,
+                    )
+                with gr.Row():
+                    dev_dd = gr.Dropdown(
+                        choices=["Alice", "Bob", "Charlie", "Diana", "Eve"],
+                        label="Developer",
+                        scale=1,
+                        interactive=True,
+                    )
+                    pts_dd = gr.Dropdown(
+                        choices=["1", "2", "3", "5", "8", "13"],
+                        label="Points",
+                        scale=1,
+                        interactive=True,
+                    )
+                    priority_dd = gr.Dropdown(
+                        choices=["P0", "P1", "P2"],
+                        label="Priority",
+                        scale=1,
+                        interactive=True,
                     )
 
-                # Quick command buttons
-                gr.Markdown("**Quick Commands:**")
+                def build_command(action, story, dev, pts, priority):
+                    """Build a command string from dropdown selections."""
+                    if action in ("LIST_BACKLOG", "VIEW_TEAM", "VIEW_VELOCITY", "VIEW_SPRINT", "VIEW_BUGS", "FINALIZE_SPRINT", "HELP"):
+                        return action
+                    if action in ("VIEW_STORY", "CHECK_DEPS", "UNASSIGN", "ADD_TO_SPRINT", "REMOVE_FROM_SPRINT"):
+                        return f"{action} {story or 'US-101'}"
+                    if action == "ESTIMATE":
+                        return f"ESTIMATE {story or 'US-101'} {pts or '5'}"
+                    if action == "ASSIGN":
+                        return f"ASSIGN {story or 'US-101'} {dev or 'Alice'}"
+                    if action == "FLAG_RISK":
+                        return f"FLAG_RISK {story or 'US-101'} scope_unclear"
+                    if action == "SET_PRIORITY":
+                        return f"SET_PRIORITY {story or 'US-101'} {priority or 'P1'}"
+                    return action
+
+                # Hidden text input to hold the built command
+                cmd_input = gr.Textbox(
+                    visible=False,
+                    value="",
+                )
+
+                btn_exec = gr.Button(
+                    "▶  Execute Action",
+                    variant="primary",
+                    elem_id="btn-execute",
+                    size="lg",
+                )
+
+                # When Execute is clicked, first build the command, then execute it
+                btn_exec.click(
+                    fn=build_command,
+                    inputs=[action_type, story_dd, dev_dd, pts_dd, priority_dd],
+                    outputs=cmd_input,
+                )
+
+                # Quick command buttons (one-click investigation)
+                gr.Markdown("**⚡ Quick Investigation:**")
                 with gr.Row():
                     for label, cmd in [
-                        ("📋 List Backlog", "LIST_BACKLOG"),
-                        ("👥 View Team", "VIEW_TEAM"),
+                        ("📋 Backlog", "LIST_BACKLOG"),
+                        ("👥 Team", "VIEW_TEAM"),
                         ("📈 Velocity", "VIEW_VELOCITY"),
-                        ("🔍 View Sprint", "VIEW_SPRINT"),
-                        ("❓ Help", "HELP"),
+                        ("🔍 Sprint", "VIEW_SPRINT"),
+                        ("🐛 Bugs", "VIEW_BUGS"),
                     ]:
+                        def _make_quick_fn(c):
+                            def _fn(log, env):
+                                updated_log, metrics, score, step, _ = execute_command(c, log, env)
+                                return updated_log, metrics, score, step
+                            return _fn
+
                         q_btn = gr.Button(label, size="sm", variant="secondary")
                         q_btn.click(
-                            fn=lambda cmd=cmd: cmd,
-                            outputs=cmd_input,
+                            fn=_make_quick_fn(cmd),
+                            inputs=[terminal_log, env_state],
+                            outputs=[terminal_log, metrics_display, score_display, step_display],
                         )
 
-                # Auto-Solve
-                gr.Markdown("**AI Agent:**")
-                btn_autosolve = gr.Button(
-                    "🤖  Auto-Solve with AI",
-                    variant="primary",
-                    size="lg",
-                    elem_id="btn-autosolve",
-                )
+                # AI Agent row
+                gr.Markdown("**🤖 AI Agent:**")
+                with gr.Row():
+                    btn_autosolve = gr.Button(
+                        "🤖  Auto-Solve with AI",
+                        variant="primary",
+                        size="lg",
+                        elem_id="btn-autosolve",
+                    )
+                    btn_benchmark = gr.Button(
+                        "🏆  Benchmark All 15 Tasks",
+                        variant="secondary",
+                        size="lg",
+                        elem_id="btn-benchmark",
+                    )
 
             # ── RIGHT PANEL ────────────────────────────────
             with gr.Column(scale=1, min_width=240):
@@ -586,47 +659,46 @@ FINALIZE_SPRINT
 
         def on_start(task_id, env):
             log, metrics, score, step, alert = start_task(task_id, env)
-            return log, metrics, score, step, alert, ""
+            return log, metrics, score, step, alert
 
         btn_start.click(
             fn=on_start,
             inputs=[task_selector, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, cmd_input],
+            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display],
         )
 
-        def on_execute(command, log, env):
-            updated_log, metrics, score, step, cleared = execute_command(command, log, env)
-            return updated_log, metrics, score, step, cleared
+        # Execute Action: build command from dropdowns, then execute
+        def on_action_execute(action, story, dev, pts, priority, log, env):
+            command = build_command(action, story, dev, pts, priority)
+            updated_log, metrics, score, step, _ = execute_command(command, log, env)
+            return updated_log, metrics, score, step
 
         btn_exec.click(
-            fn=on_execute,
-            inputs=[cmd_input, terminal_log, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display, cmd_input],
+            fn=on_action_execute,
+            inputs=[action_type, story_dd, dev_dd, pts_dd, priority_dd, terminal_log, env_state],
+            outputs=[terminal_log, metrics_display, score_display, step_display],
         )
 
-        # Also trigger on Enter key in command input
-        cmd_input.submit(
-            fn=on_execute,
-            inputs=[cmd_input, terminal_log, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display, cmd_input],
-        )
+        # Quick investigation buttons — execute directly
+        def on_quick_cmd(cmd, log, env):
+            updated_log, metrics, score, step, _ = execute_command(cmd, log, env)
+            return updated_log, metrics, score, step
 
         # Reset button — create a fresh env and restart the current task
         def on_reset(task_id):
             fresh_env = _make_env()
             log, metrics, score, step, alert = start_task(task_id, fresh_env)
-            return log, metrics, score, step, alert, "", fresh_env
+            return log, metrics, score, step, alert, fresh_env
 
         btn_reset.click(
             fn=on_reset,
             inputs=[task_selector],
-            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, cmd_input, env_state],
+            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, env_state],
         )
 
         # Auto-Solve — stream agent commands into the UI
         def on_autosolve(task_id, env):
             from sprint_planning_env.agent import run_agent
-            # Reset the environment first so agent starts fresh
             fresh_env = _make_env()
             for log, metrics, score, step in run_agent(fresh_env, task_id):
                 yield log, metrics, score, step, fresh_env
@@ -637,7 +709,66 @@ FINALIZE_SPRINT
             outputs=[terminal_log, metrics_display, score_display, step_display, env_state],
         )
 
+        # Benchmark All 15 Tasks — run agent on every task, show leaderboard
+        def on_benchmark():
+            import time as _time
+            from sprint_planning_env.agent import run_agent
+            from sprint_planning_env.server.tasks import TASK_REGISTRY
+
+            header = (
+                "╔════════════════════════════════════════════════╗\n"
+                "║   🏆  BENCHMARK — All 15 Tasks                 ║\n"
+                "╚════════════════════════════════════════════════╝\n\n"
+            )
+            results = []
+            log = header
+
+            for tid in sorted(TASK_REGISTRY.keys()):
+                task = TASK_REGISTRY[tid]
+                fresh_env = _make_env()
+                # Run agent to completion, collect final state
+                final_log = ""
+                final_score = "..."
+                for l, m, s, st in run_agent(fresh_env, tid):
+                    final_log = l
+                    final_score = s
+
+                # Extract grade from the environment
+                grade = 0.0
+                if fresh_env.board.is_finalized:
+                    grade = fresh_env.state.grader_score or 0.0
+
+                emoji = "🟢" if grade >= 0.8 else ("🟡" if grade >= 0.5 else "🔴")
+                results.append((tid, task["name"], grade))
+
+                row = f"  {emoji} {tid:<8}  {task['name']:<30}  {int(grade*100):>3}%\n"
+                log += row
+
+                # Yield progress so the user sees it build up
+                avg = sum(r[2] for r in results) / len(results)
+                summary = f"\n{'─'*50}\n  Tasks: {len(results)}/15  |  Avg Score: {int(avg*100)}%\n"
+                yield log + summary, _format_metrics({}), _format_score_initial(), f"Benchmarking {len(results)}/15"
+
+            # Final summary
+            avg = sum(r[2] for r in results) / len(results)
+            perfect = sum(1 for r in results if r[2] >= 0.8)
+            log += (
+                f"\n{'═'*50}\n"
+                f"  📊 FINAL RESULTS\n"
+                f"  Average Score : {int(avg*100)}%\n"
+                f"  Perfect (≥80%): {perfect}/15\n"
+                f"{'═'*50}\n"
+            )
+            yield log, _format_metrics({}), _format_score_initial(), "Benchmark Complete ✅"
+
+        btn_benchmark.click(
+            fn=on_benchmark,
+            inputs=[],
+            outputs=[terminal_log, metrics_display, score_display, step_display],
+        )
+
     return demo
+
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
