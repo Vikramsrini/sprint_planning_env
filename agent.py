@@ -137,12 +137,16 @@ def run_agent(env, task_id: str, max_steps: int = 15):
     accumulated_log = f"🤖 {bot._label} starting...\n"
     yield (accumulated_log, _format_metrics(env.board.get_metrics()), _format_score_initial(), "Step 0/15")
 
+    _obs = None
+    _step = 0
     for step in range(1, max_steps + 1):
         cmd = bot.next_command()
         if not cmd:
             break
 
         obs = env.step(SprintAction(command=cmd))
+        _obs = obs
+        _step = step
         entry = f"\n{'─'*40}\n$ {cmd}\n{obs.command_output or obs.error or ''}\n"
 
         if obs.done:
@@ -156,8 +160,24 @@ def run_agent(env, task_id: str, max_steps: int = 15):
             )
             accumulated_log += entry
             yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
-            break
+            return  # already finalized — skip the forced step below
 
         accumulated_log += entry
         yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
         time.sleep(0.4)
+
+    # ── Force FINALIZE_SPRINT so the summary is always shown ──────────────────
+    time.sleep(0.3)
+    obs = env.step(SprintAction(command="FINALIZE_SPRINT"))
+    grade = obs.metadata.get("grader_score", 0.0) or 0.0
+    pct = int(grade * 100)
+    entry = (
+        f"\n{'─'*40}\n$ FINALIZE_SPRINT\n"
+        f"{obs.command_output or obs.error or ''}\n"
+        f"\n{'═'*40}\n"
+        f"  EPISODE COMPLETE\n"
+        f"  🏆 FINAL SCORE: {pct}%\n"
+        f"{'═'*40}\n"
+    )
+    accumulated_log += entry
+    yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {_step + 1}/{max_steps}")
