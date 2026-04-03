@@ -116,13 +116,24 @@ class ProSprintBot:
             pts = sum(self.board._estimates.get(s, 0) or 0 for s in self.board._sprint_stories)
             avg = self._get_avg_velocity()
             
-            # If way over high limit, remove lowest priority
+            # 1. If way OVER capacity, remove stories
             if pts > avg * 1.1:
-                to_remove = sorted(self.board._sprint_stories, reverse=True) # Usually higher IDs are lower priority
+                to_remove = sorted(self.board._sprint_stories, reverse=True)
                 for sid in to_remove:
                     if pts <= avg * 1.05: break
                     pts -= (self.board._estimates.get(sid, 0) or 0)
                     self._queue.append(f"REMOVE_FROM_SPRINT {sid}")
+            
+            # 2. If way UNDER capacity, add stories from backlog
+            elif pts < avg * 0.9:
+                # Get stories NOT in sprint, but have estimates
+                backlog = [sid for sid in self.board._stories if sid not in self.board._sprint_stories]
+                # Sort by ID or default priority to pick 'best' ones
+                for sid in sorted(backlog):
+                    if pts >= avg * 0.95: break
+                    est = self.board._estimates.get(sid, 0) or 5 # Default to 5 if none
+                    self._queue.append(f"ADD_TO_SPRINT {sid}")
+                    pts += est
 
             if self._queue: return self.next_command()
 
