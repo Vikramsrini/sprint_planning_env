@@ -481,6 +481,7 @@ def build_ui():
                     interactive=False,
                     elem_id="terminal-log",
                     show_label=True,
+                    autoscroll=True,
                 )
 
                 gr.Markdown("### ⌨️ Enter Command")
@@ -537,6 +538,7 @@ def build_ui():
                     interactive=False,
                     elem_id="score-box",
                     show_label=True,
+                    autoscroll=True,
                 )
 
                 gr.Markdown("### 📖 Command Reference")
