@@ -1,71 +1,92 @@
 """
 agent.py — LLM Auto-Solve agent for SprintBoard.
 
-Uses the HF Inference API (free, no OpenAI key needed).
-The HF_TOKEN is loaded from environment variables / HF Spaces secrets.
-NEVER hard-code a token here.
+Uses the HF Inference API (free serverless endpoint).
+HF_TOKEN is read from environment variables / HF Spaces secrets.
+NEVER hard-code any token here.
 """
 
 import os
 import re
 import time
-from typing import Generator
 
 from huggingface_hub import InferenceClient
 
-# ── Model ────────────────────────────────────────────────────────────────────
-# Use a fast, free instruction-following model available on HF Inference API.
-MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
+# ── Model ─────────────────────────────────────────────────────────────────────
+# Qwen2.5-72B is available for free on HF serverless inference.
+MODEL_ID = "Qwen/Qwen2.5-72B-Instruct"
 
-# ── System prompt ─────────────────────────────────────────────────────────────
-SYSTEM_PROMPT = """You are an expert Scrum Master and Agile Coach.
-You are solving a sprint planning task inside the SprintBoard RL environment.
+# ── Valid commands for extraction fallback ─────────────────────────────────────
+VALID_PREFIXES = [
+    "LIST_BACKLOG", "VIEW_STORY", "CHECK_DEPS", "VIEW_TEAM",
+    "VIEW_VELOCITY", "VIEW_SPRINT", "VIEW_BUGS", "VIEW_EPIC",
+    "SEARCH_BACKLOG", "ESTIMATE", "ASSIGN", "UNASSIGN",
+    "ADD_TO_SPRINT", "REMOVE_FROM_SPRINT", "FLAG_RISK",
+    "SET_PRIORITY", "FINALIZE_SPRINT", "HELP",
+]
 
-RULES:
-1. Issue ONE command per response, nothing else.
-2. Use ONLY these valid commands:
-   - LIST_BACKLOG
-   - VIEW_STORY <id>
-   - CHECK_DEPS <id>
-   - VIEW_TEAM
-   - VIEW_VELOCITY
-   - VIEW_SPRINT
-   - VIEW_BUGS
-   - SEARCH_BACKLOG <keyword>
-   - ESTIMATE <id> <points>   (points: 1,2,3,5,8,13)
-   - ASSIGN <id> <developer>
-   - ADD_TO_SPRINT <id>
-   - REMOVE_FROM_SPRINT <id>
-   - FLAG_RISK <id> <reason>
-   - SET_PRIORITY <id> <P0|P1|P2>
-   - FINALIZE_SPRINT
-3. Start by investigating (LIST_BACKLOG, VIEW_TEAM, VIEW_VELOCITY).
-4. Fix problems found (estimate stories, assign developers, balance load).
-5. End with FINALIZE_SPRINT only after the sprint looks healthy.
-6. Output ONLY the command, no explanation.
-"""
+# ── System prompt ──────────────────────────────────────────────────────────────
+SYSTEM_PROMPT = """You are an expert Scrum Master solving a sprint planning task.
+
+STRICT RULES:
+- Respond with ONLY a single command, nothing else.
+- No explanations, no punctuation, no markdown.
+- Valid commands you may use:
+  LIST_BACKLOG
+  VIEW_STORY <id>
+  CHECK_DEPS <id>
+  VIEW_TEAM
+  VIEW_VELOCITY
+  VIEW_SPRINT
+  ESTIMATE <id> <points>   [points must be: 1, 2, 3, 5, 8, or 13]
+  ASSIGN <id> <name>
+  ADD_TO_SPRINT <id>
+  REMOVE_FROM_SPRINT <id>
+  FLAG_RISK <id> <reason>
+  FINALIZE_SPRINT
+
+Strategy:
+1. First investigate: LIST_BACKLOG, VIEW_TEAM, VIEW_VELOCITY.
+2. Fix issues: estimate stories, assign developers, balance workload.
+3. Only call FINALIZE_SPRINT when the sprint is healthy.
+
+Output ONE command and nothing else."""
 
 
 def _build_client() -> InferenceClient | None:
-    """Build HF InferenceClient using the HF_TOKEN secret."""
+    """Build HF InferenceClient from the HF_TOKEN secret."""
     token = os.environ.get("HF_TOKEN")
     if not token:
         return None
     return InferenceClient(token=token)
 
 
-def run_agent(
-    env,
-    task_id: str,
-    max_steps: int = 15,
-) -> Generator[tuple[str, str, str, str], None, None]:
+def _extract_command(raw: str) -> str:
     """
-    Run the LLM agent on the given environment for up to max_steps.
+    Robustly extract a valid command from LLM output.
+    Handles markdown, explanations, leading symbols, etc.
+    """
+    # Strip markdown code fences
+    raw = re.sub(r"```[a-z]*", "", raw).strip("`").strip()
 
-    Yields tuples of:
-        (terminal_log, metrics_text, score_text, step_info)
+    # Try each line from the top, find the first that starts with a known prefix
+    for line in raw.splitlines():
+        line = line.strip().strip("`").strip("*").strip()
+        for prefix in VALID_PREFIXES:
+            if line.upper().startswith(prefix):
+                return line.upper() if " " not in line else (
+                    prefix + line[len(prefix):]  # preserve args as-is
+                )
 
-    The caller (Gradio) should update the UI with each yielded value.
+    # Last resort: return first non-empty line uppercased
+    first = next((l.strip() for l in raw.splitlines() if l.strip()), "HELP")
+    return first.upper()
+
+
+def run_agent(env, task_id: str, max_steps: int = 15):
+    """
+    Run the LLM agent step-by-step.
+    Yields (terminal_log, metrics_text, score_text, step_info) after each step.
     """
     from sprint_planning_env.server.tasks import TASK_REGISTRY
     from sprint_planning_env.models import SprintAction
@@ -73,21 +94,23 @@ def run_agent(
         _format_metrics,
         _format_score,
         _format_score_initial,
-        start_task,
         DIFFICULTY_EMOJIS,
     )
 
     client = _build_client()
     if client is None:
         yield (
-            "⚠ HF_TOKEN not set.\n\nPlease add your HF_TOKEN as a Secret in\nHugging Face Spaces → Settings → Secrets.",
-            "No metrics — agent not started.",
+            "⚠  HF_TOKEN not set.\n\n"
+            "Add it in:\n"
+            "HF Spaces → Settings → Variables and Secrets → New Secret\n"
+            "Name: HF_TOKEN",
+            "Agent not started.",
             _format_score_initial(),
             "Step 0 / 0",
         )
         return
 
-    # ── Reset environment ─────────────────────────────────────────────────────
+    # ── Reset env ─────────────────────────────────────────────────────────────
     obs = env.reset(task_id=task_id)
     task = TASK_REGISTRY[task_id]
     diff = task["difficulty"]
@@ -111,36 +134,50 @@ def run_agent(
         f"Step 0 / {obs.max_steps}",
     )
 
-    # ── Conversation history for the LLM ─────────────────────────────────────
+    # ── Conversation history ───────────────────────────────────────────────────
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.append({
         "role": "user",
         "content": (
-            f"TASK: {task['description']}\n\n"
-            f"CURRENT BOARD STATE:\n{obs.command_output}\n\n"
+            f"TASK GOAL: {task.get('description', task['name'])}\n\n"
+            f"BOARD STATE:\n{obs.command_output}\n\n"
             f"SCENARIO: {obs.alert}\n\n"
             f"Issue your first command:"
         ),
     })
 
     step = 0
+    consecutive_errors = 0
+
     while step < max_steps and not obs.done:
-        # ── Ask LLM for next command ──────────────────────────────────────────
+        # ── LLM call ──────────────────────────────────────────────────────────
         try:
             response = client.chat.completions.create(
                 model=MODEL_ID,
                 messages=messages,
-                max_tokens=64,
-                temperature=0.2,
+                max_tokens=32,
+                temperature=0.1,
             )
             raw_cmd = response.choices[0].message.content.strip()
+            command = _extract_command(raw_cmd)
+            consecutive_errors = 0
         except Exception as e:
-            raw_cmd = f"# LLM error: {e}"
+            consecutive_errors += 1
+            error_msg = str(e)[:120]
+            terminal_log += f"\n⚠ API error ({consecutive_errors}): {error_msg}\n"
+            if consecutive_errors >= 3:
+                terminal_log += "\n❌ Too many API errors. Stopping agent.\n"
+                yield (
+                    terminal_log,
+                    _format_metrics(obs.metrics),
+                    _format_score(obs),
+                    f"Step {step} / {obs.max_steps}",
+                )
+                return
+            time.sleep(1)
+            continue
 
-        # Extract only the first line (command), strip markdown fences
-        command = raw_cmd.splitlines()[0].strip().strip("`").strip()
-
-        # ── Execute in environment ────────────────────────────────────────────
+        # ── Execute in environment ─────────────────────────────────────────────
         action = SprintAction(command=command)
         obs = env.step(action)
         step += 1
@@ -148,8 +185,7 @@ def run_agent(
         output = obs.command_output or ""
         error  = obs.error or ""
 
-        separator = "─" * 45
-        new_entry = f"\n{separator}\n🤖 $ {command}\n"
+        new_entry = f"\n{'─' * 45}\n🤖 $ {command}\n"
         if error:
             new_entry += f"⚠  {error}\n"
         elif output:
@@ -158,15 +194,12 @@ def run_agent(
         if obs.done:
             grade = obs.metadata.get("grader_score", 0.0) or 0.0
             pct   = int(grade * 100)
-            if grade >= 0.8:
-                verdict = "🏆 EXCELLENT"
-            elif grade >= 0.6:
-                verdict = "✅ GOOD"
-            elif grade >= 0.4:
-                verdict = "⚠️ PARTIAL"
-            else:
-                verdict = "❌ NEEDS WORK"
-
+            verdict = (
+                "🏆 EXCELLENT" if grade >= 0.8 else
+                "✅ GOOD"      if grade >= 0.6 else
+                "⚠️ PARTIAL"   if grade >= 0.4 else
+                "❌ NEEDS WORK"
+            )
             new_entry += (
                 f"\n{'═' * 45}\n"
                 f"  🤖 AGENT COMPLETE\n"
@@ -176,13 +209,13 @@ def run_agent(
 
         terminal_log += new_entry
 
-        # Add assistant turn + new board state for next iteration
+        # Feed result back to LLM
         messages.append({"role": "assistant", "content": command})
         messages.append({
             "role": "user",
             "content": (
                 f"Result:\n{output or error}\n\n"
-                f"Continue. Issue the next command:"
+                f"Issue the next command:"
             ),
         })
 
@@ -193,5 +226,4 @@ def run_agent(
             f"Step {obs.step_number} / {obs.max_steps}",
         )
 
-        # Small delay so the UI feels like it's thinking in real time
-        time.sleep(0.3)
+        time.sleep(0.4)
