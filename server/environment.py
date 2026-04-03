@@ -225,8 +225,6 @@ class SprintBoardEnvironment(Environment[SprintAction, SprintObservation, Sprint
 
         # Check done conditions
         done = False
-        if self._is_resolved:
-            done = True
         if self._step_count >= MAX_STEPS:
             done = True
         if self._board.is_finalized:

@@ -387,19 +387,12 @@ def _format_score_initial() -> str:
     )
 
 
-def _format_sprint_manifest(board) -> str:
+def _format_sprint_manifest(board, is_done: bool = False) -> str:
     """Create a beautiful HTML manifest of the final sprint plan."""
-    # Show manifest if finalized OR if the plan is essentially "complete" (estimated + assigned)
-    is_done = getattr(board, "is_finalized", False)
+    # Show manifest if finalized OR if the episode is done (auto-resolved)
+    is_finalized = getattr(board, "is_finalized", False)
     
-    # Heuristic: if everything in the sprint is estimated and assigned, it's a "complete" plan
-    # even if FINALIZE_SPRINT wasn't called (e.g. environment auto-resolved)
-    metrics = board.get_metrics()
-    is_auto_resolved = (metrics.get("unestimated_count", 0) == 0 and 
-                       metrics.get("unassigned_count", 0) == 0 and
-                       metrics.get("sprint_stories", 0) > 0)
-
-    if not is_done and not is_auto_resolved:
+    if not is_finalized and not is_done:
         return "<div style='color:#64748b;text-align:center;padding:40px;'>Sprint not finalized yet. Complete your planning and click FINALIZE_SPRINT.</div>"
 
     stories = board._sprint_stories
@@ -583,7 +576,7 @@ def build_ui():
                 # Visual Manifest Tab
                 gr.Markdown("### 📜 Final Sprint Manifest")
                 sprint_manifest = gr.HTML(
-                    value=_format_sprint_manifest(_make_env().board),
+                    value=_format_sprint_manifest(_make_env().board, is_done=False),
                     elem_id="sprint-manifest",
                 )
 
@@ -646,7 +639,7 @@ FINALIZE_SPRINT
         # Start Button
         def on_start(task_id, env):
             log, metrics, score, step, alert = start_task(task_id, env)
-            return log, metrics, score, step, alert, _format_sprint_manifest(env.board)
+            return log, metrics, score, step, alert, _format_sprint_manifest(env.board, is_done=False)
 
         btn_start.click(
             fn=on_start,
@@ -657,7 +650,8 @@ FINALIZE_SPRINT
         # Execute Action
         def on_action_execute(command, log, env):
             updated_log, metrics, score, step, _ = execute_command(command, log, env)
-            return updated_log, metrics, score, step, _format_sprint_manifest(env.board)
+            is_done = "EPISODE COMPLETE" in updated_log  # heuristic for execute_command results
+            return updated_log, metrics, score, step, _format_sprint_manifest(env.board, is_done=is_done)
 
         btn_exec.click(
             fn=on_action_execute,
@@ -673,7 +667,8 @@ FINALIZE_SPRINT
         # Quick investigation buttons
         def on_quick_cmd(cmd, log, env):
             updated_log, metrics, score, step, _ = execute_command(cmd, log, env)
-            return updated_log, metrics, score, step, _format_sprint_manifest(env.board)
+            is_done = "EPISODE COMPLETE" in updated_log
+            return updated_log, metrics, score, step, _format_sprint_manifest(env.board, is_done=is_done)
 
         outputs_list = [terminal_log, metrics_display, score_display, step_display, sprint_manifest]
         q_btn_backlog.click(fn=lambda l, e: on_quick_cmd("LIST_BACKLOG", l, e), inputs=[terminal_log, env_state], outputs=outputs_list)
@@ -686,7 +681,7 @@ FINALIZE_SPRINT
         def on_reset(task_id):
             fresh_env = _make_env()
             log, metrics, score, step, alert = start_task(task_id, fresh_env)
-            return log, metrics, score, step, alert, fresh_env, _format_sprint_manifest(fresh_env.board)
+            return log, metrics, score, step, alert, fresh_env, _format_sprint_manifest(fresh_env.board, is_done=False)
 
         btn_reset.click(
             fn=on_reset,
@@ -698,8 +693,8 @@ FINALIZE_SPRINT
         def on_autosolve(task_id, env):
             from sprint_planning_env.agent import run_agent
             fresh_env = _make_env()
-            for log, metrics, score, step in run_agent(fresh_env, task_id):
-                yield log, metrics, score, step, fresh_env, _format_sprint_manifest(fresh_env.board)
+            for log, metrics, score, step, is_terminal in run_agent(fresh_env, task_id):
+                yield log, metrics, score, step, fresh_env, _format_sprint_manifest(fresh_env.board, is_done=is_terminal)
 
         btn_autosolve.click(
             fn=on_autosolve,
