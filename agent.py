@@ -132,21 +132,32 @@ def run_agent(env, task_id: str, max_steps: int = 15):
 
     env.reset(task_id=task_id)
     bot = OmegaSprintBot(env.board)
-    
-    yield (f"🤖 {bot._label} starting...\n", _format_metrics(env.board.get_metrics()), _format_score_initial(), "Step 0/15")
+
+    # Accumulate the full terminal log so each yield shows the complete history
+    accumulated_log = f"🤖 {bot._label} starting...\n"
+    yield (accumulated_log, _format_metrics(env.board.get_metrics()), _format_score_initial(), "Step 0/15")
 
     for step in range(1, max_steps + 1):
         cmd = bot.next_command()
-        if not cmd: break
-        
+        if not cmd:
+            break
+
         obs = env.step(SprintAction(command=cmd))
-        log = f"\n{'-'*40}\n$ {cmd}\n{obs.command_output or obs.error or ''}\n"
-        
+        entry = f"\n{'─'*40}\n$ {cmd}\n{obs.command_output or obs.error or ''}\n"
+
         if obs.done:
             grade = obs.metadata.get("grader_score", 0.0) or 0.0
-            log += f"\n🏆 FINAL SCORE: {int(grade*100)}%\n"
-            yield (log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
+            pct = int(grade * 100)
+            entry += (
+                f"\n{'═'*40}\n"
+                f"  EPISODE COMPLETE\n"
+                f"  🏆 FINAL SCORE: {pct}%\n"
+                f"{'═'*40}\n"
+            )
+            accumulated_log += entry
+            yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
             break
-        
-        yield (log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
+
+        accumulated_log += entry
+        yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
         time.sleep(0.4)
