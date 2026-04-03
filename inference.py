@@ -29,15 +29,17 @@ from sprint_planning_env.client import SprintBoardEnv
 from sprint_planning_env.models import SprintAction
 
 # ---------------------------------------------------------------------------
-IMAGE_NAME = os.getenv("IMAGE_NAME")
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+# ---------------------------------------------------------------------------
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
+# Use the exact names from the checklist
+API_KEY = os.getenv("HF_TOKEN")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
 BENCHMARK = "sprintboard"
 MAX_STEPS = 15
-TEMPERATURE = 0.7  # Deterministic for reproducibility
-MAX_TOKENS = 300   # Sufficient for any planning command
+TEMPERATURE = 0.0  # Force zero temperature for benchmark consistency
+MAX_TOKENS = 128
 
 # All 15 tasks ordered by difficulty (easy -> medium -> hard)
 ALL_TASKS = [
@@ -203,7 +205,7 @@ async def async_main() -> None:
 
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
-    async with SprintBoardEnv.from_docker_image(IMAGE_NAME) as env:
+    async with SprintBoardEnv.from_docker_image(LOCAL_IMAGE_NAME) as env:
         results = []
         for task_id in ALL_TASKS:
             episode_result = await run_episode(env, client, task_id)
