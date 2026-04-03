@@ -1,0 +1,12 @@
+name: sprintboard
+version: "0.1.0"
+description: "Sprint planning and backlog grooming training environment — SprintBoard. An LLM agent receives a sprint planning scenario and must investigate the project board and fix planning issues using planning commands."
+action: SprintAction
+observation: SprintObservation
+tags:
+  - openenv
+  - rl-environment
+  - sprint-planning
+  - agile
+  - project-management
+  - scrum

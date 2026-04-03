@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sprint-planning-env"
+version = "0.1.0"
+description = "Sprint planning and backlog grooming training environment for OpenEnv"
+requires-python = ">=3.11"
+dependencies = [
+    "openenv-core>=0.2.0",
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic>=2.0",
+    "openai",
+]
+
+[project.scripts]
+server = "sprint_planning_env.server.app:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+]
+
+[tool.setuptools]
+packages = ["sprint_planning_env", "sprint_planning_env.server"]
+package-dir = {"sprint_planning_env" = "."}
