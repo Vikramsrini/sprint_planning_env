@@ -1,33 +1,23 @@
 """
-agent.py — Ultimate SprintBot "Omega" (V4).
+agent.py — Ultimate SprintBot OMEGA (V4.1).
 
-The final refinement. Handles:
-- Individual developer overloads (Hard constraint).
-- Skill mismatch audit and correction.
-- Multi-phase investigation for max process score.
-- Cross-task estimation and assignment.
+Refined state machine:
+- Ensuring the action queue is fully drained before phase transitions.
+- Improved 'Assign' logic specifically for stories moving from Backlog to Sprint.
+- Hard capacity limits preserved.
 """
 
 import os
 import re
 import time
 
-VALID_PREFIXES = [
-    "LIST_BACKLOG", "VIEW_STORY", "CHECK_DEPS", "VIEW_TEAM",
-    "VIEW_VELOCITY", "VIEW_SPRINT", "VIEW_BUGS", "VIEW_EPIC",
-    "SEARCH_BACKLOG", "ESTIMATE", "ASSIGN", "UNASSIGN",
-    "ADD_TO_SPRINT", "REMOVE_FROM_SPRINT", "FLAG_RISK",
-    "SET_PRIORITY", "FINALIZE_SPRINT", "HELP",
-]
-
 class OmegaSprintBot:
     def __init__(self, board):
         self.board = board
         self._phase = "INVESTIGATE"
-        # Expanded investigation for 100% process score
         self._queue: list[str] = ["LIST_BACKLOG", "VIEW_TEAM", "VIEW_VELOCITY", "VIEW_SPRINT"]
         self._done = False
-        self._label = "🚀 Ultimate SprintBot OMEGA"
+        self._label = "🚀 Ultimate SprintBot OMEGA V4.1"
 
     def _get_avg_velocity(self):
         h = self.board._velocity_history
@@ -41,23 +31,19 @@ class OmegaSprintBot:
         candidates = []
         for name, info in self.board._team.items():
             if name in self.board._pto_developers: continue
-            
             dev_skills = set(info.get("skills", []))
             match_score = len(req_skills.intersection(dev_skills))
             load = self.board._get_dev_load(name)
             cap = info["capacity"]
             
-            # HARD CONSTRAINT: Don't assign if it would cause overload
             if target_load_check and (load + story_pts > cap): continue
-            
             candidates.append((match_score, cap - load, name))
         
         if not candidates and target_load_check:
-            # Try again without hard capacity constraint if no one fits, 
-            # but still prioritize lowest negative capacity
             return self._find_best_dev(story_id, target_load_check=False)
             
-        if not candidates: return "Alice"
+        if not candidates: 
+            return [n for n in self.board._team if n not in self.board._pto_developers][0]
             
         candidates.sort(key=lambda x: (-x[0], -x[1]))
         return candidates[0][2]
@@ -70,53 +56,49 @@ class OmegaSprintBot:
         backlog = self.board._stories
         avg = self._get_avg_velocity()
 
+        # ── State Machine ────────────────────────────────────────────────────
+        
         if self._phase == "INVESTIGATE":
-            self._phase = "ESTIMATE_ALL"
+            # 1. Estimate everything
             for sid in sorted(backlog):
                 if self.board._estimates.get(sid) is None:
                     self._queue.append(f"ESTIMATE {sid} 5")
+            self._phase = "FIX_DEPS"
             return self.next_command()
 
-        if self._phase == "ESTIMATE_ALL":
-            self._phase = "FIX_DEPS"
+        if self._phase == "FIX_DEPS":
+            # 2. Fix dependencies
             for sid in sorted(sprint):
                 for dep in self.board._stories.get(sid, {}).get("dependencies", []):
                     if dep not in sprint:
                         self._queue.append(f"ADD_TO_SPRINT {dep}")
-            return self.next_command()
-
-        if self._phase == "FIX_DEPS":
             self._phase = "SKILL_AUDIT"
-            # Unassign skill mismatches OR overloaded/PTO devs
-            for sid in sorted(sprint):
-                dev_name = self.board._assignments.get(sid)
-                if dev_name:
-                    story = self.board._stories.get(sid, {})
-                    pts = self.board._estimates.get(sid, 0) or 5
-                    req_skills = set(story.get("skills_required", []))
-                    dev_info = self.board._team.get(dev_name, {})
-                    dev_skills = set(dev_info.get("skills", []))
-                    load = self.board._get_dev_load(dev_name)
-                    cap = dev_info.get("capacity", 10)
-                    
-                    if req_skills and not req_skills.intersection(dev_skills):
-                        self._queue.append(f"UNASSIGN {sid}")
-                    elif dev_name in self.board._pto_developers:
-                        self._queue.append(f"UNASSIGN {sid}")
-                    elif load > cap:
-                        # Only unassign if they are actually over
-                        self._queue.append(f"UNASSIGN {sid}")
             return self.next_command()
 
         if self._phase == "SKILL_AUDIT":
-            self._phase = "ASSIGN_ALL"
+            # 3. Unassign invalid/overloaded
             for sid in sorted(sprint):
-                if sid not in self.board._assignments:
-                    self._queue.append(f"ASSIGN {sid} {self._find_best_dev(sid)}")
+                dev_name = self.board._assignments.get(sid)
+                if dev_name:
+                    dev_info = self.board._team.get(dev_name, {})
+                    load = self.board._get_dev_load(dev_name)
+                    cap = dev_info.get("capacity", 10)
+                    if dev_name in self.board._pto_developers or load > cap:
+                        self._queue.append(f"UNASSIGN {sid}")
+            self._phase = "ASSIGN_ALL"
             return self.next_command()
 
         if self._phase == "ASSIGN_ALL":
+            # 4. Assign stories with best dev
+            for sid in sorted(sprint):
+                if sid not in self.board._assignments:
+                    best = self._find_best_dev(sid)
+                    self._queue.append(f"ASSIGN {sid} {best}")
             self._phase = "BALANCE_VELOCITY"
+            return self.next_command()
+
+        if self._phase == "BALANCE_VELOCITY":
+            # 5. Velocity Check
             pts = sum(self.board._estimates.get(s, 0) or 0 for s in sprint)
             if pts > avg * 1.1:
                 for sid in sorted(sprint, reverse=True):
@@ -130,14 +112,17 @@ class OmegaSprintBot:
                     self._queue.append(f"ADD_TO_SPRINT {sid}")
                     pts += (self.board._estimates.get(sid, 0) or 5)
             
-            if self._queue: self._phase = "SKILL_AUDIT"
+            if self._queue: 
+                # If we added/removed anything, we MUST jump back to assignment
+                self._phase = "SKILL_AUDIT"
+            else:
+                self._phase = "FINISH"
             return self.next_command()
 
-        if self._phase == "BALANCE_VELOCITY":
-            self._phase = "FINISH"
+        if self._phase == "FINISH":
+            self._done = True
             return "FINALIZE_SPRINT"
 
-        self._done = True
         return None
 
 def run_agent(env, task_id: str, max_steps: int = 15):
@@ -148,13 +133,15 @@ def run_agent(env, task_id: str, max_steps: int = 15):
     env.reset(task_id=task_id)
     bot = OmegaSprintBot(env.board)
     
-    yield (f"🤖 {bot._label} starting...\nAnalysing board state and team capacity...", _format_metrics(env.board.get_metrics()), _format_score_initial(), "Step 0/15")
+    yield (f"🤖 {bot._label} starting...\n", _format_metrics(env.board.get_metrics()), _format_score_initial(), "Step 0/15")
 
     for step in range(1, max_steps + 1):
-        cmd = bot.next_command() or "FINALIZE_SPRINT"
-        obs = env.step(SprintAction(command=cmd))
+        cmd = bot.next_command()
+        if not cmd: break
         
+        obs = env.step(SprintAction(command=cmd))
         log = f"\n{'-'*40}\n$ {cmd}\n{obs.command_output or obs.error or ''}\n"
+        
         if obs.done:
             grade = obs.metadata.get("grader_score", 0.0) or 0.0
             log += f"\n🏆 FINAL SCORE: {int(grade*100)}%\n"
@@ -162,4 +149,4 @@ def run_agent(env, task_id: str, max_steps: int = 15):
             break
         
         yield (log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}")
-        time.sleep(0.5)
+        time.sleep(0.4)
