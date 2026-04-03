@@ -213,8 +213,8 @@ def _grade_missing_dependency(board: ProjectBoard, params: dict, history: List[s
     """Grade task 3: Was the missing dependency added to the sprint?"""
     breakdown = {}
     score = 0.0
-    blocked = params.get("blocked_story", "US-105")
-    missing = params.get("missing_dep", "US-101")
+    blocked = params.get("blocked_story", "105")
+    missing = params.get("missing_dep", "101")
 
     # Investigation (0.3)
     if _history_contains(history, "CHECK_DEPS", blocked):

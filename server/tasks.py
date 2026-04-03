@@ -162,7 +162,7 @@ VELOCITY_HISTORY = [38, 34, 36, 31, 33]  # Last 5 sprints
 # Shared story definitions reused across tasks.
 
 STORY_POOL = {
-    "US-101": {
+    "101": {
         "title": "User Authentication Redesign",
         "description": "Redesign the authentication flow to support OAuth2 and SSO. "
                        "Includes login, registration, password reset, and session management.",
@@ -175,7 +175,7 @@ STORY_POOL = {
             "Session timeout after 30min inactivity",
         ],
     },
-    "US-102": {
+    "102": {
         "title": "Payment Gateway Integration",
         "description": "Integrate Stripe payment processing for subscription billing. "
                        "Handle card payments, invoicing, and webhook reconciliation.",
@@ -188,7 +188,7 @@ STORY_POOL = {
             "Failed payment retry logic implemented",
         ],
     },
-    "US-103": {
+    "103": {
         "title": "Dashboard Analytics Widget",
         "description": "Build an analytics dashboard showing key metrics: DAU, revenue, churn.",
         "points": 5, "priority": "P1", "type": "feature",
@@ -199,7 +199,7 @@ STORY_POOL = {
             "Churn metric displays with trend arrow",
         ],
     },
-    "US-104": {
+    "104": {
         "title": "API Rate Limiter",
         "description": "Implement rate limiting middleware for the public API. "
                        "Support per-user and per-IP limits with configurable windows.",
@@ -211,20 +211,20 @@ STORY_POOL = {
             "Rate limit state persists across restarts",
         ],
     },
-    "US-105": {
+    "105": {
         "title": "Database Migration Script",
         "description": "Write migration script to add new columns to the users table "
                        "and backfill existing records. Must be zero-downtime.",
         "points": 3, "priority": "P1", "type": "tech-debt",
         "skills_required": ["postgresql", "python"],
-        "dependencies": ["US-101"],
+        "dependencies": ["101"],
         "acceptance_criteria": [
             "Migration runs without downtime",
             "All existing records backfilled correctly",
             "Rollback script tested",
         ],
     },
-    "US-106": {
+    "106": {
         "title": "Mobile Responsive Header",
         "description": "Fix the site header to be fully responsive on mobile devices.",
         "points": 3, "priority": "P2", "type": "feature",
@@ -235,7 +235,7 @@ STORY_POOL = {
             "No horizontal scroll on any device width",
         ],
     },
-    "US-107": {
+    "107": {
         "title": "Error Logging Service",
         "description": "Set up centralized error logging with Sentry integration.",
         "points": 3, "priority": "P1", "type": "tech-debt",
@@ -246,7 +246,7 @@ STORY_POOL = {
             "Alerts configured for error rate spikes",
         ],
     },
-    "US-108": {
+    "108": {
         "title": "Search Autocomplete",
         "description": "Add autocomplete suggestions to the main search bar using elasticsearch.",
         "points": 5, "priority": "P2", "type": "feature",
@@ -257,7 +257,7 @@ STORY_POOL = {
             "Keyboard navigation works",
         ],
     },
-    "US-109": {
+    "109": {
         "title": "CI/CD Pipeline Fix",
         "description": "The deployment pipeline has been failing intermittently due to flaky "
                        "integration tests. Fix the test suite and add retry logic.",
@@ -269,19 +269,19 @@ STORY_POOL = {
             "Retry logic added for network-dependent tests",
         ],
     },
-    "US-110": {
+    "110": {
         "title": "User Profile Page",
         "description": "Build the user profile page with avatar upload and settings.",
         "points": 5, "priority": "P2", "type": "feature",
         "skills_required": ["react", "typescript", "api"],
-        "dependencies": ["US-101"],
+        "dependencies": ["101"],
         "acceptance_criteria": [
             "User can upload and crop avatar",
             "Settings save without page reload",
             "Profile URL is shareable",
         ],
     },
-    "US-111": {
+    "111": {
         "title": "Notification System Backend",
         "description": "Build the backend notification system supporting email, push, "
                        "and in-app notifications with user preferences.",
@@ -294,7 +294,7 @@ STORY_POOL = {
             "Notification queue handles 1000 msg/s",
         ],
     },
-    "US-112": {
+    "112": {
         "title": "Frontend Unit Test Coverage",
         "description": "Increase frontend test coverage from 45% to 80%.",
         "points": 5, "priority": "P2", "type": "tech-debt",
@@ -304,19 +304,19 @@ STORY_POOL = {
             "All critical user flows have integration tests",
         ],
     },
-    "US-113": {
+    "113": {
         "title": "Admin User Management Panel",
         "description": "Build admin panel for managing users: view, edit roles, deactivate.",
         "points": 5, "priority": "P1", "type": "feature",
         "skills_required": ["react", "python", "api"],
-        "dependencies": ["US-101"],
+        "dependencies": ["101"],
         "acceptance_criteria": [
             "Admin can search users by email",
             "Role changes take effect immediately",
             "Deactivated users cannot log in",
         ],
     },
-    "US-114": {
+    "114": {
         "title": "API Documentation Generator",
         "description": "Set up automatic OpenAPI spec generation from code annotations.",
         "points": 2, "priority": "P2", "type": "tech-debt",
@@ -326,19 +326,19 @@ STORY_POOL = {
             "All endpoints documented with examples",
         ],
     },
-    "US-115": {
+    "115": {
         "title": "File Upload Service",
         "description": "Implement S3-backed file upload with virus scanning and size limits.",
         "points": 5, "priority": "P1", "type": "feature",
         "skills_required": ["python", "api", "devops"],
-        "dependencies": ["US-101"],
+        "dependencies": ["101"],
         "acceptance_criteria": [
             "Files upload to S3 with presigned URLs",
             "Virus scan runs before storage",
             "Max file size configurable per tenant",
         ],
     },
-    "US-116": {
+    "116": {
         "title": "Database Read Replica Setup",
         "description": "Configure read replicas and route read-heavy queries to them.",
         "points": 8, "priority": "P1", "type": "tech-debt",
@@ -349,7 +349,7 @@ STORY_POOL = {
             "Failover tested and documented",
         ],
     },
-    "US-117": {
+    "117": {
         "title": "Dark Mode Toggle",
         "description": "Add dark mode support across the entire frontend application.",
         "points": 3, "priority": "P2", "type": "feature",
@@ -360,12 +360,12 @@ STORY_POOL = {
             "No flash of light theme on load",
         ],
     },
-    "US-118": {
+    "118": {
         "title": "Webhook Delivery System",
         "description": "Build outbound webhook system for third-party integrations.",
         "points": 8, "priority": "P1", "type": "feature",
         "skills_required": ["python", "api", "kafka"],
-        "dependencies": ["US-111"],
+        "dependencies": ["111"],
         "acceptance_criteria": [
             "Webhooks deliver within 5 seconds",
             "Failed deliveries retry with exponential backoff",
@@ -373,7 +373,7 @@ STORY_POOL = {
             "HMAC signature verification documented",
         ],
     },
-    "US-119": {
+    "119": {
         "title": "Performance Monitoring Setup",
         "description": "Integrate APM tools for backend and frontend performance tracking.",
         "points": 3, "priority": "P2", "type": "tech-debt",
@@ -384,7 +384,7 @@ STORY_POOL = {
             "Alerting for p99 > 2s configured",
         ],
     },
-    "US-120": {
+    "120": {
         "title": "Multi-language Support (i18n)",
         "description": "Add internationalization framework and translate UI to Spanish and French.",
         "points": 8, "priority": "P2", "type": "feature",
@@ -467,8 +467,8 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "alert": ALERTS["unestimated_stories"],
         "params": {
-            "unestimated_story_ids": ["US-103", "US-106", "US-107"],
-            "sprint_stories": ["US-101", "US-103", "US-105", "US-106", "US-107"],
+            "unestimated_story_ids": ["103", "106", "107"],
+            "sprint_stories": ["101", "103", "105", "106", "107"],
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
         "allowed_dangerous": [],
@@ -487,12 +487,12 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
             "overloaded_dev": "Alice",
             "overloaded_points": 24,
             "overloaded_capacity": 10,
-            "sprint_stories": ["US-101", "US-102", "US-104", "US-105"],
+            "sprint_stories": ["101", "102", "104", "105"],
             "initial_assignments": {
-                "US-101": "Alice",  # 8pts
-                "US-102": "Alice",  # 8pts
-                "US-104": "Alice",  # 5pts
-                "US-105": "Alice",  # 3pts → total 24
+                "101": "Alice",  # 8pts
+                "102": "Alice",  # 8pts
+                "104": "Alice",  # 5pts
+                "105": "Alice",  # 3pts → total 24
             },
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
@@ -509,9 +509,9 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "alert": ALERTS["missing_dependency"],
         "params": {
-            "blocked_story": "US-105",
-            "missing_dep": "US-101",
-            "sprint_stories": ["US-103", "US-105", "US-106", "US-107"],
+            "blocked_story": "105",
+            "missing_dep": "101",
+            "sprint_stories": ["103", "105", "106", "107"],
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
         "allowed_dangerous": [],
@@ -527,9 +527,9 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "alert": ALERTS["scope_creep"],
         "params": {
-            "sprint_stories": ["US-101", "US-103", "US-106", "US-108", "US-114"],
-            "vague_stories": ["US-114"],  # Only has 2 ACs, descriptions are thin
-            "vague_story_ids_ground_truth": ["US-114"],
+            "sprint_stories": ["101", "103", "106", "108", "114"],
+            "vague_stories": ["114"],  # Only has 2 ACs, descriptions are thin
+            "vague_story_ids_ground_truth": ["114"],
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
         "allowed_dangerous": [],
@@ -540,14 +540,14 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         "difficulty": "easy",
         "description": (
             "P0 stories US-101 and US-102 are not in the sprint, but P2 stories "
-            "US-106 and US-117 are. The sprint doesn't align with business priorities. "
+            "106 and US-117 are. The sprint doesn't align with business priorities. "
             "Fix the priority alignment."
         ),
         "alert": ALERTS["wrong_priority"],
         "params": {
-            "sprint_stories": ["US-106", "US-108", "US-112", "US-117"],
-            "missing_p0s": ["US-101", "US-102"],
-            "low_priority_in_sprint": ["US-106", "US-117"],
+            "sprint_stories": ["106", "108", "112", "117"],
+            "missing_p0s": ["101", "102"],
+            "low_priority_in_sprint": ["106", "117"],
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
         "allowed_dangerous": [],
@@ -568,10 +568,10 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         "alert": ALERTS["velocity_overload"],
         "params": {
             "sprint_stories": [
-                "US-101", "US-102", "US-103", "US-104", "US-105",
-                "US-106", "US-107", "US-108", "US-109", "US-110",
-                "US-111", "US-112", "US-113", "US-114", "US-115",
-                "US-116", "US-117", "US-118",
+                "101", "102", "103", "104", "105",
+                "106", "107", "108", "109", "110",
+                "111", "112", "113", "114", "115",
+                "116", "117", "118",
             ],
             "total_points": 94,
             "velocity_avg": 34,
@@ -589,18 +589,18 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "alert": ALERTS["skill_mismatch"],
         "params": {
-            "sprint_stories": ["US-103", "US-104", "US-106", "US-107"],
+            "sprint_stories": ["103", "104", "106", "107"],
             "initial_assignments": {
-                "US-103": "Alice",   # Dashboard (react) → Alice (backend-only)
-                "US-104": "Bob",     # API Rate Limiter (python) → Bob (frontend-only)
-                "US-106": "Eve",     # Mobile Header (react/css) → Eve (backend)
-                "US-107": "Bob",     # Error Logging (python) → Bob (frontend-only)
+                "103": "Alice",   # Dashboard (react) → Alice (backend-only)
+                "104": "Bob",     # API Rate Limiter (python) → Bob (frontend-only)
+                "106": "Eve",     # Mobile Header (react/css) → Eve (backend)
+                "107": "Bob",     # Error Logging (python) → Bob (frontend-only)
             },
             "correct_skill_assignments": {
-                "US-103": ["Bob", "Charlie", "Diana"],  # needs react
-                "US-104": ["Alice", "Diana", "Eve"],     # needs python/api
-                "US-106": ["Bob", "Charlie", "Diana"],   # needs react/css
-                "US-107": ["Alice", "Charlie", "Diana", "Eve"],  # needs python
+                "103": ["Bob", "Charlie", "Diana"],  # needs react
+                "104": ["Alice", "Diana", "Eve"],     # needs python/api
+                "106": ["Bob", "Charlie", "Diana"],   # needs react/css
+                "107": ["Alice", "Charlie", "Diana", "Eve"],  # needs python
             },
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
@@ -634,8 +634,8 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "alert": ALERTS["priority_conflict"],
         "params": {
-            "conflicting_stories": ["US-101", "US-102"],
-            "sprint_stories": ["US-103", "US-106", "US-107"],
+            "conflicting_stories": ["101", "102"],
+            "sprint_stories": ["103", "106", "107"],
             "remaining_capacity": 10,
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
@@ -651,7 +651,7 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "alert": ALERTS["tech_debt_balance"],
         "params": {
-            "sprint_stories": ["US-101", "US-102", "US-103", "US-108", "US-110", "US-111"],
+            "sprint_stories": ["101", "102", "103", "108", "110", "111"],
             "total_sprint_points": 39,
             "tech_debt_target_pct": 0.20,
             "p1_bugs": ["BUG-01", "BUG-02", "BUG-03"],
@@ -671,20 +671,20 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         "difficulty": "hard",
         "description": (
             "Two problems exist simultaneously: (1) Circular dependency between "
-            "US-105 and US-113. (2) Alice overloaded at 21pts (capacity 10). "
+            "105 and US-113. (2) Alice overloaded at 21pts (capacity 10). "
             "Both issues must be resolved."
         ),
         "alert": ALERTS["dependency_chain_overload"],
         "params": {
-            "sprint_stories": ["US-101", "US-102", "US-104", "US-105", "US-113"],
-            "circular_deps": {"US-105": "US-113", "US-113": "US-105"},
+            "sprint_stories": ["101", "102", "104", "105", "113"],
+            "circular_deps": {"105": "113", "113": "105"},
             "overloaded_dev": "Alice",
             "initial_assignments": {
-                "US-101": "Alice",  # 8pts
-                "US-102": "Alice",  # 8pts
-                "US-104": "Alice",  # 5pts → total 21
-                "US-105": "Diana",
-                "US-113": "Diana",
+                "101": "Alice",  # 8pts
+                "102": "Alice",  # 8pts
+                "104": "Alice",  # 5pts → total 21
+                "105": "Diana",
+                "113": "Diana",
             },
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
@@ -701,18 +701,18 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "alert": ALERTS["pto_velocity_drop"],
         "params": {
-            "sprint_stories": ["US-101", "US-102", "US-103", "US-104", "US-105",
-                                "US-107", "US-108"],
+            "sprint_stories": ["101", "102", "103", "104", "105",
+                                "107", "108"],
             "pto_developer": "Alice",
             "velocity_history_decline": [38, 35, 33, 30, 28],
             "initial_assignments": {
-                "US-101": "Alice",  # Alice is on PTO!
-                "US-102": "Eve",
-                "US-103": "Bob",
-                "US-104": "Alice",  # Alice is on PTO!
-                "US-105": "Diana",
-                "US-107": "Charlie",
-                "US-108": "Bob",
+                "101": "Alice",  # Alice is on PTO!
+                "102": "Eve",
+                "103": "Bob",
+                "104": "Alice",  # Alice is on PTO!
+                "105": "Diana",
+                "107": "Charlie",
+                "108": "Bob",
             },
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
@@ -729,17 +729,17 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "alert": ALERTS["cross_team_dependency"],
         "params": {
-            "sprint_stories": ["US-104", "US-107", "US-109", "US-115"],
-            "cross_team_stories": ["US-115"],
+            "sprint_stories": ["104", "107", "109", "115"],
+            "cross_team_stories": ["115"],
             "cross_team_dep": "Team Beta API (starts week 2)",
-            "skill_gap_story": "US-109",
+            "skill_gap_story": "109",
             "skill_gap_skill": "devops",
             "only_capable_dev": "Diana",
             "initial_assignments": {
-                "US-104": "Alice",
-                "US-107": "Charlie",
-                "US-109": "Eve",    # Eve doesn't have devops skills
-                "US-115": "Alice",  # Depends on Team Beta
+                "104": "Alice",
+                "107": "Charlie",
+                "109": "Eve",    # Eve doesn't have devops skills
+                "115": "Alice",  # Depends on Team Beta
             },
         },
         "fatal_patterns": ["DELETE_STORY", "CLEAR_SPRINT", "REMOVE_DEVELOPER"],
@@ -756,22 +756,22 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         ),
         "alert": ALERTS["sprint_rescue"],
         "params": {
-            "sprint_stories": ["US-102", "US-103", "US-105", "US-106", "US-108",
-                                "US-112", "US-114"],
+            "sprint_stories": ["102", "103", "105", "106", "108",
+                                "112", "114"],
             "initial_assignments": {
-                "US-102": "Alice",   # 8pts
-                "US-103": "Alice",   # 5pts - skill mismatch (react→backend dev)
-                "US-105": "Diana",   # 3pts - dependency US-101 missing from sprint
-                "US-106": "Eve",     # 3pts - skill mismatch (css→backend dev)
-                "US-108": "Alice",   # 5pts → Alice total = 18 (overload!)
-                "US-112": "Bob",     # 5pts
-                "US-114": "Charlie", # UNESTIMATED
+                "102": "Alice",   # 8pts
+                "103": "Alice",   # 5pts - skill mismatch (react→backend dev)
+                "105": "Diana",   # 3pts - dependency US-101 missing from sprint
+                "106": "Eve",     # 3pts - skill mismatch (css→backend dev)
+                "108": "Alice",   # 5pts → Alice total = 18 (overload!)
+                "112": "Bob",     # 5pts
+                "114": "Charlie", # UNESTIMATED
             },
             "problems": {
-                "unestimated": ["US-114"],
+                "unestimated": ["114"],
                 "overloaded_dev": "Alice",
-                "missing_dep": {"US-105": "US-101"},
-                "skill_mismatch": {"US-103": "Alice", "US-106": "Eve"},
+                "missing_dep": {"105": "101"},
+                "skill_mismatch": {"103": "Alice", "106": "Eve"},
                 "priority_issue": "P0 US-101 not in sprint but P2 US-112 is",
             },
         },
@@ -791,10 +791,10 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         "alert": ALERTS["full_sprint_planning"],
         "params": {
             "backlog_stories": [
-                "US-101", "US-102", "US-103", "US-104", "US-105",
-                "US-106", "US-107", "US-108", "US-109", "US-110",
-                "US-111", "US-112", "US-113", "US-114", "US-115",
-                "US-116", "US-117", "US-118", "US-119", "US-120",
+                "101", "102", "103", "104", "105",
+                "106", "107", "108", "109", "110",
+                "111", "112", "113", "114", "115",
+                "116", "117", "118", "119", "120",
             ],
             "team": ["Alice", "Bob", "Charlie", "Diana"],
             "target_velocity": 34,

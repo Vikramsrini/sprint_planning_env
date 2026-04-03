@@ -387,6 +387,55 @@ def _format_score_initial() -> str:
     )
 
 
+def _format_sprint_manifest(board) -> str:
+    """Create a beautiful HTML manifest of the final sprint plan."""
+    if not board.is_finalized:
+        return "<div style='color:#64748b;text-align:center;padding:40px;'>Sprint not finalized yet. Complete your planning and click FINALIZE_SPRINT.</div>"
+
+    sprint = board.get_sprint_summary()
+    stories = board._sprint_stories
+    team = board._team
+    assignments = board._assignments
+
+    html = "<div style='display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;'>"
+    
+    for name, info in team.items():
+        dev_stories = [s for s in stories if assignments.get(s) == name]
+        total_pts = sum(board._estimates.get(s, 0) or 0 for s in dev_stories)
+        cap = info["capacity"]
+        load_pct = (total_pts / cap * 100) if cap > 0 else 0
+        border_color = "#22c55e" if load_pct <= 100 else "#ef4444"
+        pto_tag = "<span style='background:#ef4444;color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:8px;'>PTO</span>" if name in board._pto_developers else ""
+
+        html += f"""
+        <div style="background:#1e1b4b;border:1px solid {border_color}33;border-top:4px solid {border_color};padding:12px;border-radius:8px;">
+            <div style="font-weight:bold;color:#f1f5f9;display:flex;align-items:center;">
+                👤 {name} {pto_tag}
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin:4px 0 8px 0;">
+                Points: {total_pts}/{cap} ({load_pct:.0f}%)
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+        """
+        for sid in dev_stories:
+            story = board._stories.get(sid, {})
+            title = story.get("title", sid)
+            pts = board._estimates.get(sid, 0) or "?"
+            html += f"""
+                <div style="background:#0f172a;padding:6px;border-radius:4px;font-size:11px;color:#cbd5e1;">
+                    <span style="color:#7c3aed;font-weight:bold;">{sid}</span> ({pts} pts)
+                    <div style="color:#64748b;margin-top:2px;">{title[:25]}...</div>
+                </div>
+            """
+        if not dev_stories:
+            html += "<div style='color:#475569;font-size:11px;font-style:italic;'>No stories assigned.</div>"
+        
+        html += "</div></div>"
+    
+    html += "</div>"
+    return html
+
+
 # ── Build the Gradio UI ───────────────────────────────────────────────────────
 
 THEME = gr.themes.Base(
@@ -484,76 +533,24 @@ def build_ui():
                     autoscroll=True,
                 )
 
-                # ── Interactive Action Builder ──
-                gr.Markdown("### 🎮 Action Builder")
+                gr.Markdown("### ⌨️ Enter Command")
                 with gr.Row():
-                    action_type = gr.Dropdown(
-                        choices=[
-                            "LIST_BACKLOG", "VIEW_TEAM", "VIEW_VELOCITY",
-                            "VIEW_SPRINT", "VIEW_BUGS", "CHECK_DEPS",
-                            "VIEW_STORY", "ESTIMATE", "ASSIGN", "UNASSIGN",
-                            "ADD_TO_SPRINT", "REMOVE_FROM_SPRINT",
-                            "FLAG_RISK", "SET_PRIORITY", "FINALIZE_SPRINT",
-                        ],
-                        value="LIST_BACKLOG",
-                        label="Action",
-                        scale=2,
+                    cmd_input = gr.Textbox(
+                        placeholder="e.g.  VIEW_TEAM  or  ASSIGN 101 Alice  or  HELP",
+                        label="",
+                        lines=1,
+                        max_lines=1,
+                        scale=4,
                         interactive=True,
+                        elem_id="cmd-input",
+                        show_label=False,
                     )
-                    story_dd = gr.Dropdown(
-                        choices=[f"US-{i}" for i in range(101, 121)],
-                        label="Story ID",
+                    btn_exec = gr.Button(
+                        "Execute ▶",
                         scale=1,
-                        interactive=True,
+                        variant="primary",
+                        elem_id="btn-execute",
                     )
-                with gr.Row():
-                    dev_dd = gr.Dropdown(
-                        choices=["Alice", "Bob", "Charlie", "Diana", "Eve"],
-                        label="Developer",
-                        scale=1,
-                        interactive=True,
-                    )
-                    pts_dd = gr.Dropdown(
-                        choices=["1", "2", "3", "5", "8", "13"],
-                        label="Points",
-                        scale=1,
-                        interactive=True,
-                    )
-                    priority_dd = gr.Dropdown(
-                        choices=["P0", "P1", "P2"],
-                        label="Priority",
-                        scale=1,
-                        interactive=True,
-                    )
-
-                def build_command(action, story, dev, pts, priority):
-                    """Build a command string from dropdown selections."""
-                    if action in ("LIST_BACKLOG", "VIEW_TEAM", "VIEW_VELOCITY", "VIEW_SPRINT", "VIEW_BUGS", "FINALIZE_SPRINT", "HELP"):
-                        return action
-                    if action in ("VIEW_STORY", "CHECK_DEPS", "UNASSIGN", "ADD_TO_SPRINT", "REMOVE_FROM_SPRINT"):
-                        return f"{action} {story or 'US-101'}"
-                    if action == "ESTIMATE":
-                        return f"ESTIMATE {story or 'US-101'} {pts or '5'}"
-                    if action == "ASSIGN":
-                        return f"ASSIGN {story or 'US-101'} {dev or 'Alice'}"
-                    if action == "FLAG_RISK":
-                        return f"FLAG_RISK {story or 'US-101'} scope_unclear"
-                    if action == "SET_PRIORITY":
-                        return f"SET_PRIORITY {story or 'US-101'} {priority or 'P1'}"
-                    return action
-
-                # Hidden text input to hold the built command
-                cmd_input = gr.Textbox(
-                    visible=False,
-                    value="",
-                )
-
-                btn_exec = gr.Button(
-                    "▶  Execute Action",
-                    variant="primary",
-                    elem_id="btn-execute",
-                    size="lg",
-                )
 
                 # Quick command buttons (one-click investigation)
                 gr.Markdown("**⚡ Quick Investigation:**")
@@ -573,6 +570,13 @@ def build_ui():
                         size="lg",
                         elem_id="btn-autosolve",
                     )
+
+                # Visual Manifest Tab
+                gr.Markdown("### 📜 Final Sprint Manifest")
+                sprint_manifest = gr.HTML(
+                    value=_format_sprint_manifest(_make_env().board),
+                    elem_id="sprint-manifest",
+                )
 
             # ── RIGHT PANEL ────────────────────────────────
             with gr.Column(scale=1, min_width=240):
@@ -633,47 +637,52 @@ FINALIZE_SPRINT
         # Start Button
         def on_start(task_id, env):
             log, metrics, score, step, alert = start_task(task_id, env)
-            return log, metrics, score, step, alert
+            return log, metrics, score, step, alert, _format_sprint_manifest(env.board)
 
         btn_start.click(
             fn=on_start,
             inputs=[task_selector, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display],
+            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, sprint_manifest],
         )
 
-        # Execute Action: build command from dropdowns, then execute
-        def on_action_execute(action, story, dev, pts, priority, log, env):
-            command = build_command(action, story, dev, pts, priority)
+        # Execute Action
+        def on_action_execute(command, log, env):
             updated_log, metrics, score, step, _ = execute_command(command, log, env)
-            return updated_log, metrics, score, step
+            return updated_log, metrics, score, step, _format_sprint_manifest(env.board)
 
         btn_exec.click(
             fn=on_action_execute,
-            inputs=[action_type, story_dd, dev_dd, pts_dd, priority_dd, terminal_log, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display],
+            inputs=[cmd_input, terminal_log, env_state],
+            outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest],
+        )
+        cmd_input.submit(
+            fn=on_action_execute,
+            inputs=[cmd_input, terminal_log, env_state],
+            outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest],
         )
 
         # Quick investigation buttons
         def on_quick_cmd(cmd, log, env):
             updated_log, metrics, score, step, _ = execute_command(cmd, log, env)
-            return updated_log, metrics, score, step
+            return updated_log, metrics, score, step, _format_sprint_manifest(env.board)
 
-        q_btn_backlog.click(fn=lambda l, e: on_quick_cmd("LIST_BACKLOG", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
-        q_btn_team.click(fn=lambda l, e: on_quick_cmd("VIEW_TEAM", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
-        q_btn_vel.click(fn=lambda l, e: on_quick_cmd("VIEW_VELOCITY", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
-        q_btn_sprint.click(fn=lambda l, e: on_quick_cmd("VIEW_SPRINT", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
-        q_btn_bugs.click(fn=lambda l, e: on_quick_cmd("VIEW_BUGS", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display])
+        outputs_list = [terminal_log, metrics_display, score_display, step_display, sprint_manifest]
+        q_btn_backlog.click(fn=lambda l, e: on_quick_cmd("LIST_BACKLOG", l, e), inputs=[terminal_log, env_state], outputs=outputs_list)
+        q_btn_team.click(fn=lambda l, e: on_quick_cmd("VIEW_TEAM", l, e) , inputs=[terminal_log, env_state], outputs=outputs_list)
+        q_btn_vel.click(fn=lambda l, e: on_quick_cmd("VIEW_VELOCITY", l, e) , inputs=[terminal_log, env_state], outputs=outputs_list)
+        q_btn_sprint.click(fn=lambda l, e: on_quick_cmd("VIEW_SPRINT", l, e) , inputs=[terminal_log, env_state], outputs=outputs_list)
+        q_btn_bugs.click(fn=lambda l, e: on_quick_cmd("VIEW_BUGS", l, e) , inputs=[terminal_log, env_state], outputs=outputs_list)
 
         # Reset button
         def on_reset(task_id):
             fresh_env = _make_env()
             log, metrics, score, step, alert = start_task(task_id, fresh_env)
-            return log, metrics, score, step, alert, fresh_env
+            return log, metrics, score, step, alert, fresh_env, _format_sprint_manifest(fresh_env.board)
 
         btn_reset.click(
             fn=on_reset,
             inputs=[task_selector],
-            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, env_state],
+            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, env_state, sprint_manifest],
         )
 
         # Auto-Solve
@@ -681,12 +690,12 @@ FINALIZE_SPRINT
             from sprint_planning_env.agent import run_agent
             fresh_env = _make_env()
             for log, metrics, score, step in run_agent(fresh_env, task_id):
-                yield log, metrics, score, step, fresh_env
+                yield log, metrics, score, step, fresh_env, _format_sprint_manifest(fresh_env.board)
 
         btn_autosolve.click(
             fn=on_autosolve,
             inputs=[task_selector, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display, env_state],
+            outputs=[terminal_log, metrics_display, score_display, step_display, env_state, sprint_manifest],
         )
 
 
