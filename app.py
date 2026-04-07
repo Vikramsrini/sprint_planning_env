@@ -22,7 +22,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import gradio as gr
 from typing import Optional
-from fastapi import FastAPI
 
 # In-process environment (no HTTP server needed for UI)
 from sprint_planning_env.server.environment import SprintBoardEnvironment
@@ -981,7 +980,10 @@ def build_ui():
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-app = FastAPI()
+# Import the OpenEnv API app (has /reset, /step, /ws, /tasks, /grader endpoints)
+from sprint_planning_env.server.app import app
+
+# Build and mount Gradio UI onto the same FastAPI server
 demo = build_ui()
 app = gr.mount_gradio_app(app, demo, path="/")
 
