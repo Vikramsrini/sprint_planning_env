@@ -12,7 +12,8 @@ COPY . .
 # Install the package in editable mode
 RUN pip install -e .
 
-EXPOSE 7860
+ENV PORT=8000
+EXPOSE 8000
 
-# HF Spaces launches app.py at the root
-CMD ["python", "app.py"]
+# Start the OpenEnv server
+CMD ["python", "server/app.py"]

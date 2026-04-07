@@ -11,8 +11,13 @@ connections (each EnvClient gets its own SprintBoardEnvironment).
 """
 
 import logging
+import os
+import sys
 import threading
 from typing import Optional
+
+# Ensure project root is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from fastapi.responses import JSONResponse
 
@@ -96,7 +101,9 @@ async def get_grader_score():
 def main():
     """Entry point for running the SprintBoard server."""
     import uvicorn
-    uvicorn.run("sprint_planning_env.server.app:app", host="0.0.0.0", port=8000)
+    import os
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("sprint_planning_env.server.app:app", host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":

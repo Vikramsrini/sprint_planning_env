@@ -125,9 +125,28 @@ async def run_episode(env: SprintBoardEnv, client: OpenAI, task_id: str):
 
 async def async_main():
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY or "dummy")
-    async with SprintBoardEnv.from_docker_image(LOCAL_IMAGE_NAME) as env:
-        for tid in [f"task_{i}" for i in range(1, 16)]:
-            await run_episode(env, client, tid)
+    
+    # ── Environment Connection Logic ──
+    # Priority: 1. ENV_URL 2. LOCAL_IMAGE_NAME 3. localhost:8000
+    env_url = os.getenv("ENV_URL")
+    
+    if env_url:
+        print(f"[INFO] Connecting to environment at {env_url}")
+        async with SprintBoardEnv(url=env_url) as env:
+            for tid in [f"task_{i}" for i in range(1, 16)]:
+                await run_episode(env, client, tid)
+    elif LOCAL_IMAGE_NAME:
+        print(f"[INFO] Starting environment from image: {LOCAL_IMAGE_NAME}")
+        async with SprintBoardEnv.from_docker_image(LOCAL_IMAGE_NAME) as env:
+            for tid in [f"task_{i}" for i in range(1, 16)]:
+                await run_episode(env, client, tid)
+    else:
+        # Default fallback for most evaluators: localhost server
+        default_url = "http://localhost:8000"
+        print(f"[INFO] No ENV_URL or LOCAL_IMAGE_NAME, falling back to {default_url}")
+        async with SprintBoardEnv(url=default_url) as env:
+            for tid in [f"task_{i}" for i in range(1, 16)]:
+                await run_episode(env, client, tid)
 
 if __name__ == "__main__":
     asyncio.run(async_main())
