@@ -30,169 +30,121 @@ DIFFICULTY_EMOJIS = {
 
 # ── Custom CSS ──────────────────────────────────────────────────────
 CSS = """
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-    --primary: #8b5cf6;
-    --primary-hover: #7c3aed;
-    --bg-dark: #09090b;
-    --card-bg: rgba(24, 24, 27, 0.7);
-    --border: rgba(39, 39, 42, 0.8);
-    --text-main: #f4f4f5;
-    --text-muted: #a1a1aa;
+    --primary: #5eead4;
+    --primary-dim: #115e59;
+    --bg-dark: #0f172a;
+    --card-bg: #1e293b;
+    --border: #334155;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
     --terminal-bg: #000000;
-    --terminal-cyan: #22d3ee;
 }
 
 body, .gradio-container {
     background: var(--bg-dark) !important;
-    font-family: 'Inter', sans-serif !important;
+    font-family: 'Space Grotesk', sans-serif !important;
     color: var(--text-main) !important;
 }
 
-.panel-glass {
+.crime-card {
     background: var(--card-bg) !important;
-    backdrop-filter: blur(16px) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 16px !important;
-    padding: 24px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border-radius: 8px !important;
+    padding: 16px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
 
 #header {
-    background: linear-gradient(135deg, #1e1b4b 0%, #09090b 100%);
-    border: 1px solid rgba(124, 58, 237, 0.2);
-    padding: 32px;
-    border-radius: 20px;
-    margin-bottom: 24px;
-    text-align: left;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    text-align: center;
+    padding: 24px 0 32px 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 32px;
 }
 #header h1 {
     color: #fff;
-    font-size: 2.8rem;
-    font-weight: 800;
+    font-size: 2.4rem;
+    font-weight: 700;
     margin: 0;
-    letter-spacing: -2px;
-    background: linear-gradient(to right, #ffffff 0%, #c084fc 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-#header p {
-    color: var(--text-muted);
-    margin: 8px 0 0 0;
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-.terminal-window {
-    background: var(--terminal-bg) !important;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid #3f3f46;
-    display: flex;
-    flex-direction: column;
-}
-.terminal-header {
-    background: #18181b;
-    padding: 10px 16px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    border-bottom: 1px solid #27272a;
-}
-.dot { width: 12px; height: 12px; border-radius: 50%; }
-.dot.red { background: #ff5f56; }
-.dot.amber { background: #ffbd2e; }
-.dot.green { background: #27c93f; }
-.terminal-title {
-    color: #71717a;
-    font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 600;
-    margin-left: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: 'Space Grotesk', sans-serif;
 }
 
 #terminal-log-wrapper {
-    height: 600px !important;
-    max-height: 600px !important;
+    height: 520px !important;
+    max-height: 520px !important;
     overflow-y: auto !important;
-    overflow-x: hidden !important; /* Contain horizontal within pre */
-    padding: 0 !important;
-    background: #000 !important;
-    scrollbar-width: thin;
-    scrollbar-color: #3f3f46 transparent;
-    border-radius: 0 0 12px 12px;
+    background: #111827 !important;
+    border: 1px solid var(--border);
+    border-radius: 4px !important;
+    margin-bottom: 16px;
 }
 #terminal-log-wrapper pre {
     margin: 0;
-    padding: 24px;
-    color: var(--terminal-cyan);
+    padding: 20px;
+    color: #d1d5db;
     font-family: 'JetBrains Mono', monospace !important;
     font-size: 13px !important;
     line-height: 1.6;
     white-space: pre !important; 
-    overflow-x: auto !important; /* Enable horizontal scrolling if table is too wide */
-    background: transparent !important;
-    min-width: 100%;
+    overflow-x: auto !important;
 }
 
 #cmd-input textarea {
-    background: #18181b !important;
+    background: #000000 !important;
     color: #fff !important;
-    border: 1px solid #3f3f46 !important;
-    border-radius: 12px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 4px !important;
     font-family: 'JetBrains Mono', monospace !important;
-    padding: 14px 18px !important;
+    padding: 12px 16px !important;
     font-size: 14px !important;
-    transition: all 0.2s ease;
-}
-#cmd-input textarea:focus {
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important;
 }
 
-.btn-primary {
-    background: var(--primary) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 12px !important;
-    font-weight: 700 !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3) !important;
-}
-.btn-primary:hover {
-    transform: translateY(-2px) !important;
-    background: var(--primary-hover) !important;
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4) !important;
-}
-.btn-secondary {
-    background: #18181b !important;
-    color: var(--text-main) !important;
-    border: 1px solid #3f3f46 !important;
-    border-radius: 12px !important;
+.btn-crime {
+    background: #334155 !important;
+    color: #fff !important;
+    border: 1px solid #475569 !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 11px !important;
     transition: all 0.2s ease !important;
 }
-.btn-secondary:hover {
-    background: #27272a !important;
-    border-color: #52525b !important;
+.btn-crime:hover {
+    background: #475569 !important;
+    border-color: var(--primary) !important;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+.btn-action {
+    background: var(--primary-dim) !important;
+    color: var(--primary) !important;
+    border: 1px solid var(--primary) !important;
+    border-radius: 4px !important;
+    height: 48px !important;
+}
+
+.metric-box {
+    background: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--primary);
+    padding: 12px;
+    margin-bottom: 8px;
+}
 
 label {
     color: var(--primary) !important;
-    font-size: 0.8rem !important;
+    font-size: 0.75rem !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
+    letter-spacing: 1px !important;
     margin-bottom: 8px !important;
-    display: block !important;
 }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
 """
 
 # ── State management ─────────────────────────────────────────────────────────
@@ -233,7 +185,7 @@ def _render_terminal(text: str) -> str:
 
 def _format_metrics(metrics: dict) -> str:
     if not metrics:
-        return "<div style='color:#71717a;font-style:italic;padding:20px;text-align:center;'>Start a task to see metrics...</div>"
+        return "<div style='color:#64748b;font-style:italic;padding:12px;'>Initialize task to see metrics...</div>"
 
     total_pts  = metrics.get('total_points', 0)
     ratio      = metrics.get('velocity_ratio', 0)
@@ -242,45 +194,28 @@ def _format_metrics(metrics: dict) -> str:
     unassigned = metrics.get('unassigned_count', 0)
     dep_issues = metrics.get('dependency_issues', 0)
     risks      = metrics.get('risk_flags', 0)
-    overloaded = metrics.get('overloaded_developers', [])
-    finalized  = metrics.get('finalized', False)
 
-    vel_color = '#22c55e' if ratio <= 1.0 else ('#f59e0b' if ratio <= 1.15 else '#ef4444')
-    
-    def metric_pill(label, value, icon, color=None, warning=False):
-        bg = color if color else 'rgba(39, 39, 42, 0.5)'
-        if warning and value > 0:
-            bg = 'rgba(127, 29, 29, 0.4)'
-            border = '1px solid rgba(239, 68, 68, 0.4)'
-        else:
-            border = '1px solid rgba(63, 63, 70, 0.4)'
+    def metric_item(label, value, warning=False):
+        color = "#e2e8f0"
+        if warning and value > 0: color = "#f43f5e"
         return f'''
-        <div style="background: {bg}; border: {border}; padding: 10px; border-radius: 10px; flex: 1; min-width: 80px;">
-            <div style="font-size: 9px; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">{icon} {label}</div>
-            <div style="font-size: 1.1rem; color: #fff; font-weight: 800;">{value}</div>
+        <div class="metric-box">
+            <div style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">{label}</div>
+            <div style="font-size: 16px; color: {color}; font-weight: 700;">{value}</div>
         </div>
         '''
 
-    html = f'''
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-            {metric_pill('Stories', stories, '📋')}
-            {metric_pill('Pts', total_pts, '🎯')}
-            {metric_pill('Velocity', f'{ratio:.2f}x', '⚡', color=f'{vel_color}33')}
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            {metric_pill('Estimates', unest, '❓', warning=True)}
-            {metric_pill('Assigns', unassigned, '👤', warning=True)}
-            {metric_pill('Deps', dep_issues, '🔗', warning=True)}
-            {metric_pill('Risks', risks, '🚩', warning=True)}
-        </div>
+    return f'''
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        {metric_item('Assigned Stories', stories)}
+        {metric_item('Total Points', total_pts)}
+        {metric_item('Velocity Ratio', f"{ratio:.2f}x")}
+        {metric_item('Unestimated', unest, True)}
+        {metric_item('Unassigned', unassigned, True)}
+        {metric_item('Dep. Issues', dep_issues, True)}
+        {metric_item('Risk Flags', risks, True)}
+    </div>
     '''
-    if overloaded:
-        html += f"<div style='background:rgba(127,29,29,0.2); border:1px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px; font-size:10px; color:#fca5a5;'>🔴 <b>Overloaded:</b> {', '.join(overloaded)}</div>"
-    if finalized:
-        html += "<div style='background:rgba(16,185,129,0.2); border:1px solid #10b98144; padding:10px; border-radius:8px; font-size:12px; color:#34d399; text-align:center; font-weight:800;'>✅ SPRINT FINALIZED</div>"
-    html += "</div>"
-    return html
 
 def _format_score(obs) -> str:
     meta = getattr(obs, 'metadata', {}) or {}
@@ -288,52 +223,32 @@ def _format_score(obs) -> str:
     score = meta.get('grader_score')
     is_resolved = meta.get('is_resolved', False)
 
-    def progress_bar(label, value, color='#8b5cf6'):
-        pct = int(value * 100) if value is not None else 0
-        return f'''
-        <div style="margin-bottom: 16px;">
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #a1a1aa; margin-bottom: 6px;">
-                <span style="font-weight: 600;">{label}</span>
-                <span style="color: #fff; font-weight: 700;">{pct}%</span>
-            </div>
-            <div style="background: #27272a; height: 8px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
-                <div style="background: {color}; width: {pct}%; height: 100%; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-            </div>
-        </div>
-        '''
-
     html = f'''
-    <div style="background: rgba(24, 24, 27, 0.9); border-radius: 16px; padding: 24px; border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
-        <div style="text-align: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #27272a;">
-            <div style="font-size: 11px; color: var(--primary); font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px;">Cumulative Reward</div>
-            <div style="font-size: 2.8rem; color: #fff; font-weight: 900; letter-spacing: -1px; text-shadow: 0 0 20px var(--primary-glow);">{cum_reward:.3f}</div>
-        </div>
+    <div style="padding: 16px; text-align: center; border-bottom: 1px solid #334155; margin-bottom: 16px;">
+        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Reward</div>
+        <div style="font-size: 24px; color: #fff; font-weight: 700;">{cum_reward:.3f}</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 16px;">
     '''
     if score is not None:
         pct = int(score * 100)
-        color = '#10b981' if score >= 0.7 else ('#f59e0b' if score >= 0.4 else '#ef4444')
+        color = '#5eead4' if score >= 0.7 else ('#fbbf24' if score >= 0.4 else '#f87171')
         html += f'''
-        <div>
-            <div style="text-align: center; margin-bottom: 24px;">
-                <div style="font-size: 10px; color: #71717a; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Grader Score</div>
-                <div style="font-size: 2rem; font-weight: 900; color: {color};">{pct}%</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; color: #94a3b8;">Grader Score</span>
+                <span style="color: {color}; font-weight: 700;">{pct}%</span>
             </div>
-            {progress_bar("Investigation", score, color)}
-            {progress_bar("Planning", score, color)}
-            {progress_bar("Process", score, color)}
-            <div style="text-align: center; margin-top: 16px;">
-                <span style="background: {'rgba(16,185,129,0.15)' if is_resolved else 'rgba(39,39,42,0.8)'}; color: {'#34d399' if is_resolved else '#71717a'}; padding: 6px 16px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 1px solid {'rgba(16,185,129,0.3)' if is_resolved else '#27272a'};">
-                    { "✅ RESOLVED" if is_resolved else "🔄 IN PROGRESS" }
+            <div style="background: #0f172a; height: 12px; border: 1px solid #334155; border-radius: 2px;">
+                <div style="background: {color}; width: {pct}%; height: 100%;"></div>
+            </div>
+            <div style="text-align: center; margin-top: 8px;">
+                <span style="font-size: 11px; font-weight: 700; color: {color if is_resolved else '#94a3b8'};">
+                    { "[ RESOLVED ]" if is_resolved else "[ IN PROGRESS ]" }
                 </span>
             </div>
-        </div>
         '''
     else:
-        html += f'''<div style="opacity: 0.3;">
-            {progress_bar("Investigation", 0, '#3f3f46')}
-            {progress_bar("Planning", 0, '#3f3f46')}
-            {progress_bar("Process", 0, '#3f3f46')}
-        </div>'''
+        html += '<div style="color: #475569; font-size: 12px; text-align: center;">Wait for episode finish...</div>'
     html += "</div>"
     return html
 
@@ -405,7 +320,7 @@ def start_task(task_id: str, env: SprintBoardEnvironment):
 def execute_command(command: str, terminal_log: str, env: SprintBoardEnvironment):
     command = command.strip()
     if not command:
-        return _render_terminal(terminal_log), _format_metrics(env.board.metrics), _format_score_initial(), "", "", terminal_log
+        return _render_terminal(terminal_log), _format_metrics(env.board.get_metrics()), _format_score_initial(), "", "", terminal_log
 
     action = SprintAction(command=command)
     obs = env.step(action)
@@ -443,11 +358,10 @@ THEME = gr.themes.Soft(
 )
 
 def build_ui():
-    with gr.Blocks(title="SprintBoard — Modern RL Environment", theme=THEME, css=CSS) as demo:
+    with gr.Blocks(title="SprintBoard — Detective Agent", theme=THEME, css=CSS) as demo:
         gr.HTML("""
         <div id="header">
-            <h1>⚡ SprintBoard</h1>
-            <p>Professional Sprint Planning & Backlog Management · LLM Agent Training Grounds</p>
+            <h1>🔍 SPRINTBOARD — DETECTIVE AGENT</h1>
         </div>
         """)
 
@@ -455,73 +369,62 @@ def build_ui():
         raw_terminal_state = gr.State("")
 
         with gr.Row():
-            with gr.Column(scale=1, min_width=320):
-                with gr.Column(elem_classes=["panel-glass"]):
-                    gr.Markdown("### 🎯 Session Control")
-                    task_selector = gr.Dropdown(choices=_task_choices(), value="task_1", label="Active Task", interactive=True)
-                    btn_start = gr.Button("▶  INITIALIZE ENVIRONMENT", variant="primary", elem_classes=["btn-primary"])
-                    
-                    gr.Markdown("### 📋 Current Context")
-                    alert_display = gr.Textbox(value="Initialize a task to begin.", label="Contextual Alert", lines=6, interactive=False)
-                    
-                    gr.Markdown("### 📊 Real-time Metrics")
-                    metrics_display = gr.HTML(value=_format_metrics(None))
-
-            with gr.Column(scale=3):
-                with gr.Column(elem_classes=["terminal-window"]):
-                    gr.HTML("""<div class="terminal-header">
-                        <div class="dot red"></div><div class="dot amber"></div><div class="dot green"></div>
-                        <div class="terminal-title">SPRINTBOARD TERMINAL - v2.0</div>
-                    </div>""")
-                    terminal_log = gr.HTML(
-                        value=_render_terminal("Welcome to SprintBoard Terminal.\nWaiting for initialization...\n"),
-                        elem_id="terminal-outer"
-                    )
-
-                with gr.Row():
-                    step_display = gr.HTML(value="<div style='color:#71717a;font-size:12px;padding:8px;font-family:\"JetBrains Mono\"'>Step 0 / --</div>")
-
-                with gr.Row():
-                    cmd_input = gr.Textbox(placeholder="Enter command...", scale=4, interactive=True, elem_id="cmd-input", show_label=False)
-                    btn_exec = gr.Button("EXECUTE", scale=1, variant="primary", elem_classes=["btn-primary"])
-
-                with gr.Row():
-                    with gr.Column(scale=2):
-                        gr.Markdown("**⚡ Quick Actions:**")
-                        with gr.Row():
-                            q_btn_backlog = gr.Button("📋 Backlog", size="sm", elem_classes=["btn-secondary"])
-                            q_btn_team    = gr.Button("👥 Team", size="sm", elem_classes=["btn-secondary"])
-                            q_btn_vel     = gr.Button("📈 Velocity", size="sm", elem_classes=["btn-secondary"])
-                            q_btn_sprint  = gr.Button("🔍 Sprint", size="sm", elem_classes=["btn-secondary"])
-                    with gr.Column(scale=1):
-                        gr.Markdown("**🤖 Automation:**")
-                        btn_autosolve = gr.Button("🤖  AUTO-SOLVE", variant="primary", elem_classes=["btn-primary"])
-
-                gr.Markdown("### 📜 Live Sprint Manifest")
-                sprint_manifest = gr.HTML(value=_format_sprint_manifest(_make_env().board))
-
+            # Left Column: Search & Case Info
             with gr.Column(scale=1, min_width=300):
-                gr.Markdown("### 🏆 Performance Tracker")
-                score_display = gr.HTML(value=_format_score_initial())
+                with gr.Column(elem_classes=["crime-card"]):
+                    gr.Markdown("### 🗃 Select Task File")
+                    task_selector = gr.Dropdown(choices=_task_choices(), value="task_1", show_label=False, interactive=True)
+                    btn_start = gr.Button("Initialize Task", variant="primary", elem_classes=["btn-action"])
                 
-                with gr.Accordion("📖 Command Reference", open=True):
-                    gr.Markdown("""
-**Investigation Commands**
-`LIST_BACKLOG`
-`VIEW_STORY <id>`
-`VIEW_TEAM`
-`VIEW_VELOCITY`
-`CHECK_DEPS <id>`
+                gr.Markdown("#### 📂 Task Briefing")
+                alert_display = gr.Textbox(value="Select a task to see tactical overview...", show_label=False, lines=6, interactive=False)
+                
+                with gr.Column(elem_classes=["crime-card"]):
+                    gr.Markdown("#### 🏆 Score Tracker")
+                    score_display = gr.HTML(value=_format_score_initial())
+                    
+                gr.Markdown("#### 📈 Metrics")
+                metrics_display = gr.HTML(value=_format_metrics(None))
 
-**Planning Commands**
-`ESTIMATE <id> <points>`
-`ASSIGN <id> <developer>`
-`ADD_TO_SPRINT <id>`
-`REMOVE_FROM_SPRINT <id>`
-`FINALIZE_SPRINT`
+            # Center Column: Terminal & Controls
+            with gr.Column(scale=2):
+                gr.Markdown("#### 🖥 Textbox")
+                terminal_log = gr.HTML(
+                    value=_render_terminal("Welcome to SprintBoard Lab.\nWaiting for task initialization...\n"),
+                    elem_id="terminal-outer"
+                )
+                
+                cmd_input = gr.Textbox(placeholder="Enter command here...", show_label=False, interactive=True, elem_id="cmd-input")
+                
+                with gr.Row():
+                    btn_exec = gr.Button("Execute Command", variant="primary", elem_classes=["btn-action"])
+                    btn_autosolve = gr.Button("Auto-Solve with AI 🤖", variant="primary", elem_classes=["btn-action"])
+                
+                with gr.Row():
+                    q_btn_backlog = gr.Button("📋 Backlog", elem_classes=["btn-crime"])
+                    q_btn_team    = gr.Button("👥 Team", elem_classes=["btn-crime"])
+                    q_btn_vel     = gr.Button("📈 Velocity", elem_classes=["btn-crime"])
+                    q_btn_sprint  = gr.Button("🔍 Sprint", elem_classes=["btn-crime"])
+
+                with gr.Row():
+                    btn_reset = gr.Button("↺ RESET EPISODE", elem_classes=["btn-crime"])
+                    step_display = gr.HTML(value="<div style='color:#64748b;font-size:12px;padding:8px;font-family:\"JetBrains Mono\"'>Step 0 / 15</div>")
+
+                with gr.Accordion("📖 Command Reference", open=False):
+                    gr.Markdown("""
+| Investigation Commands | Planning Commands |
+| :--- | :--- |
+| `LIST_BACKLOG` | `ESTIMATE <id> <points>` |
+| `VIEW_STORY <id>` | `ASSIGN <id> <developer>` |
+| `VIEW_TEAM` | `ADD_TO_SPRINT <id>` |
+| `VIEW_VELOCITY` | `REMOVE_FROM_SPRINT <id>` |
+| `CHECK_DEPS <id>` | `FINALIZE_SPRINT` |
 """)
 
-                btn_reset = gr.Button("↺  RESET EPISODE", variant="secondary", elem_classes=["btn-secondary"])
+            # Right Column: Manifest Wall
+            with gr.Column(scale=1, min_width=300):
+                gr.Markdown("#### 📋 Sprint Manifest")
+                sprint_manifest = gr.HTML(value=_format_sprint_manifest(_make_env().board))
 
         # ── Event Wiring ──────────────────────────────────────────────────────
 
