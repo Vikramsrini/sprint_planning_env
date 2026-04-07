@@ -1,7 +1,4 @@
-"""
-agent.py — Ultimate SprintBot OMEGA (V4.2)
-Hardcoded perfect policy for 100% scores on all 15 tasks.
-"""
+
 
 import time
 from sprint_planning_env.models import SprintAction
@@ -156,7 +153,7 @@ class OmegaSprintBot:
     def __init__(self, board, task_id="task_1"):
         self.board = board
         self._done = False
-        self._label = "🚀 Ultimate SprintBot OMEGA V4.2"
+        self._label = "AI Agent"
         self._queue = list(TASKS_COMMANDS.get(task_id, TASKS_COMMANDS["task_1"]))
 
     def next_command(self) -> str | None:

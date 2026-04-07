@@ -1,19 +1,3 @@
-"""
-SprintBoard — Gradio Playground for Hugging Face Spaces.
-
-This file is the HF Spaces entry point. It creates a professional
-interactive UI where anyone can select a sprint planning task,
-type planning commands, and see the board respond in real time —
-no local setup required.
-
-Layout:
-  - Left panel:  Task selector, scenario alert, live board metrics
-  - Center:      Terminal-style command log (all commands + outputs)
-  - Right panel: Score tracker with 3-axis grading breakdown
-
-The environment runs in-process (no HTTP server) for simplicity.
-"""
-
 import sys
 import os
 
@@ -28,7 +12,7 @@ from sprint_planning_env.server.environment import SprintBoardEnvironment
 from sprint_planning_env.server.tasks import TASK_REGISTRY
 from sprint_planning_env.models import SprintAction
 
-# ── Colour palette ──────────────────────────────────────────────────
+# Colour palette
 DIFFICULTY_COLOURS = {
     "easy":   "#22c55e",   # green
     "medium": "#f59e0b",   # amber
@@ -41,7 +25,7 @@ DIFFICULTY_EMOJIS = {
     "hard": "🔴",
 }
 
-# ── Custom CSS ──────────────────────────────────────────────────────
+# Custom CSS
 CSS = """
 /* ── Global ── */
 body, .gradio-container {
@@ -185,7 +169,7 @@ label {
 .blue  { color: #3b82f6; }
 """
 
-# ── State management ─────────────────────────────────────────────────────────
+# State management
 # Each Gradio session holds its own environment instance via gr.State.
 
 def _make_env():
@@ -201,7 +185,7 @@ def _task_choices():
         choices.append((label, tid))
     return choices
 
-# ── Core logic ────────────────────────────────────────────────────────────────
+# Core logic
 
 def start_task(task_id: str, env: SprintBoardEnvironment):
     """Reset environment and start a new task episode."""
@@ -438,7 +422,7 @@ def _format_sprint_manifest(board, is_done: bool = False) -> str:
     return html
 
 
-# ── Build the Gradio UI ───────────────────────────────────────────────────────
+# Build the Gradio UI
 
 THEME = gr.themes.Base(
     primary_hue="violet",
@@ -451,7 +435,7 @@ THEME = gr.themes.Base(
 def build_ui():
     with gr.Blocks(title="SprintBoard — Sprint Planning RL Environment") as demo:
 
-        # ── Header ──
+        # Header
         gr.HTML("""
         <div id="header">
             <h1>⚡ SprintBoard</h1>
@@ -459,11 +443,11 @@ def build_ui():
         </div>
         """)
 
-        # ── Per-session state ──
+        # Per-session state
         env_state = gr.State(_make_env)
 
         with gr.Row():
-            # ── LEFT PANEL ────────────────────────────────
+            # LEFT PANEL
             with gr.Column(scale=1, min_width=280):
                 gr.Markdown("### 🎯 Select Task")
 
@@ -499,7 +483,7 @@ def build_ui():
                     show_label=True,
                 )
 
-            # ── CENTER PANEL ───────────────────────────────
+            # CENTER PANEL
             with gr.Column(scale=3):
                 gr.Markdown("### 🖥️ Command Terminal")
 
@@ -634,7 +618,7 @@ FINALIZE_SPRINT
         </div>
         """)
 
-        # ── Event wiring ──────────────────────────────────────────────────────
+        # Event wiring
 
         # Start Button
         def on_start(task_id, env):
@@ -707,7 +691,7 @@ FINALIZE_SPRINT
 
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# Entry point
 
 import uvicorn
 from sprint_planning_env.server.app import app as openenv_app
