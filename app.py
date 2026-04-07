@@ -693,7 +693,7 @@ FINALIZE_SPRINT
         def on_autosolve(task_id, env):
             from sprint_planning_env.agent import run_agent
             fresh_env = _make_env()
-            for log, metrics, score, step, is_terminal in run_agent(fresh_env, task_id):
+            for log, metrics, score, step, is_terminal in run_agent(fresh_env, task_id, _format_metrics, _format_score, _format_score_initial):
                 yield log, metrics, score, step, fresh_env, _format_sprint_manifest(fresh_env.board, is_done=is_terminal)
 
         btn_autosolve.click(

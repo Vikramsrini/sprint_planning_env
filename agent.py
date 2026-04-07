@@ -167,14 +167,12 @@ class OmegaSprintBot:
             self._done = True
         return cmd
 
-def run_agent(env, task_id: str, max_steps: int = 15):
-    from sprint_planning_env.app import _format_metrics, _format_score, _format_score_initial
-    
+def run_agent(env, task_id: str, fmt_metrics, fmt_score, fmt_score_initial, max_steps: int = 15):
     env.reset(task_id=task_id)
     bot = OmegaSprintBot(env.board, task_id)
 
     accumulated_log = f"🤖 {bot._label} starting...\n"
-    yield (accumulated_log, _format_metrics(env.board.get_metrics()), _format_score_initial(), "Step 0/15", False)
+    yield (accumulated_log, fmt_metrics(env.board.get_metrics()), fmt_score_initial(), "Step 0/15", False)
 
     for step in range(1, max_steps + 1):
         cmd = bot.next_command()
@@ -196,10 +194,10 @@ def run_agent(env, task_id: str, max_steps: int = 15):
                 f"{'═'*40}\n"
             )
             accumulated_log += entry
-            yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}", True)
+            yield (accumulated_log, fmt_metrics(obs.metrics), fmt_score(obs), f"Step {step}/{max_steps}", True)
             break
 
         accumulated_log += entry
-        yield (accumulated_log, _format_metrics(obs.metrics), _format_score(obs), f"Step {step}/{max_steps}", False)
+        yield (accumulated_log, fmt_metrics(obs.metrics), fmt_score(obs), f"Step {step}/{max_steps}", False)
         # Reduced sleep purely for test execution speed; can stay identical or lower.
         time.sleep(0.1)
