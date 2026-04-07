@@ -44,9 +44,6 @@ DIFFICULTY_EMOJIS = {
 
 # ── Custom CSS ──────────────────────────────────────────────────────
 CSS = """
-/* ── Google Font Import ── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 /* ── Global Dark Background ── */
 body, .gradio-container {
     background: #0b0d14 !important;
@@ -724,6 +721,11 @@ THEME = gr.themes.Base(
 
 def build_ui():
     with gr.Blocks(title="SprintBoard — Sprint Planning RL Environment", theme=THEME, css=CSS) as demo:
+
+        # ── Font loader + CSS fallback ──
+        gr.HTML("""
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+        """)
 
         # ── Header ──
         gr.HTML("""
