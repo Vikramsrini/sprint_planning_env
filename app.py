@@ -307,17 +307,18 @@ body, .gradio-container {
     margin-top: 12px;
 }
 .cmd-ref-block code {
-    display: block;
-    background: rgba(124, 58, 237, 0.08);
-    color: #c4b5fd;
-    padding: 4px 8px;
-    margin: 3px 0;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    font-weight: 500;
-    white-space: nowrap;
-    line-height: 1.4;
+    display: block !important;
+    background: rgba(124, 58, 237, 0.08) !important;
+    color: #c4b5fd !important;
+    padding: 6px 10px !important;
+    margin: 4px 0 !important;
+    border-radius: 6px !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.65rem !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    line-height: 1.4 !important;
+    border: 1px solid rgba(124, 58, 237, 0.1) !important;
 }
 .cmd-ref-block .cmd-category {
     color: #64748b;
@@ -874,24 +875,24 @@ def build_ui():
                 <div class='section-header' style='margin-top:16px;'>📖 Command Reference</div>
                 <div class='cmd-ref-block'>
                     <div class='cmd-category'>Investigation</div>
-                    <code>LIST_BACKLOG</code>
-                    <code>VIEW_STORY  &lt;id&gt;</code>
-                    <code>CHECK_DEPS  &lt;id&gt;</code>
-                    <code>VIEW_TEAM</code>
-                    <code>VIEW_VELOCITY</code>
-                    <code>VIEW_SPRINT</code>
-                    <code>VIEW_BUGS</code>
-                    <code>VIEW_EPIC   &lt;id&gt;</code>
-                    <code>SEARCH_BACKLOG &lt;kw&gt;</code>
-                    <div class='cmd-category'>Planning</div>
-                    <code>ESTIMATE &lt;id&gt; &lt;pts&gt;</code>
-                    <code>ASSIGN   &lt;id&gt; &lt;name&gt;</code>
-                    <code>UNASSIGN &lt;id&gt;</code>
-                    <code>ADD_TO_SPRINT &lt;id&gt;</code>
-                    <code>REMOVE_FROM_SPRINT &lt;id&gt;</code>
-                    <code>SET_PRIORITY &lt;id&gt; P0|P1|P2</code>
-                    <code>FLAG_RISK &lt;id&gt; &lt;reason&gt;</code>
-                    <code>FINALIZE_SPRINT</code>
+                    <div><code>LIST_BACKLOG</code></div>
+                    <div><code>VIEW_STORY  &lt;id&gt;</code></div>
+                    <div><code>CHECK_DEPS  &lt;id&gt;</code></div>
+                    <div><code>VIEW_TEAM</code></div>
+                    <div><code>VIEW_VELOCITY</code></div>
+                    <div><code>VIEW_SPRINT</code></div>
+                    <div><code>VIEW_BUGS</code></div>
+                    <div><code>VIEW_EPIC   &lt;id&gt;</code></div>
+                    <div><code>SEARCH_BACKLOG &lt;kw&gt;</code></div>
+                    <div class='cmd-category' style='margin-top:16px;'>Planning</div>
+                    <div><code>ESTIMATE &lt;id&gt; &lt;pts&gt;</code></div>
+                    <div><code>ASSIGN   &lt;id&gt; &lt;name&gt;</code></div>
+                    <div><code>UNASSIGN &lt;id&gt;</code></div>
+                    <div><code>ADD_TO_SPRINT &lt;id&gt;</code></div>
+                    <div><code>REMOVE_FROM_SPRINT &lt;id&gt;</code></div>
+                    <div><code>SET_PRIORITY &lt;id&gt; P0|P1|P2</code></div>
+                    <div><code>FLAG_RISK &lt;id&gt; &lt;reason&gt;</code></div>
+                    <div><code>FINALIZE_SPRINT</code></div>
                 </div>
                 """)
 
