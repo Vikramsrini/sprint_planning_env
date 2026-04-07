@@ -283,50 +283,51 @@ def _format_score(obs) -> str:
     score = meta.get('grader_score')
     is_resolved = meta.get('is_resolved', False)
 
-    def progress_bar(label, value, weight, color='#8b5cf6'):
+    def progress_bar(label, value, color='#8b5cf6'):
         pct = int(value * 100) if value is not None else 0
         return f'''
-        <div style="margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #a1a1aa; margin-bottom: 4px;">
-                <span>{label}</span>
-                <span>{pct}%</span>
+        <div style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #a1a1aa; margin-bottom: 6px;">
+                <span style="font-weight: 600;">{label}</span>
+                <span style="color: #fff; font-weight: 700;">{pct}%</span>
             </div>
-            <div style="background: #27272a; height: 6px; border-radius: 3px; overflow: hidden;">
-                <div style="background: {color}; width: {pct}%; height: 100%; transition: width 0.8s ease-out;"></div>
+            <div style="background: #27272a; height: 8px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="background: {color}; width: {pct}%; height: 100%; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);"></div>
             </div>
         </div>
         '''
 
     html = f'''
-    <div style="background: rgba(24, 24, 27, 0.8); border-radius: 12px; padding: 20px; border: 1px solid #3f3f46;">
-        <div style="text-align: center; margin-bottom: 20px;">
-            <div style="font-size: 10px; color: #8b5cf6; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">Reward</div>
-            <div style="font-size: 2.2rem; color: #fff; font-weight: 900;">{cum_reward:.3f}</div>
+    <div style="background: rgba(24, 24, 27, 0.9); border-radius: 16px; padding: 24px; border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+        <div style="text-align: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #27272a;">
+            <div style="font-size: 11px; color: var(--primary); font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px;">Cumulative Reward</div>
+            <div style="font-size: 2.8rem; color: #fff; font-weight: 900; letter-spacing: -1px; text-shadow: 0 0 20px var(--primary-glow);">{cum_reward:.3f}</div>
         </div>
     '''
     if score is not None:
         pct = int(score * 100)
-        color = '#10b981' if score >= 0.6 else '#f59e0b'
+        color = '#10b981' if score >= 0.7 else ('#f59e0b' if score >= 0.4 else '#ef4444')
         html += f'''
-        <div style="border-top: 1px solid #3f3f46; padding-top: 20px;">
-            <div style="text-align: center; margin-bottom: 20px; color: {color};">
-                <div style="font-size: 1.8rem; font-weight: 900;">{pct}%</div>
+        <div>
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 10px; color: #71717a; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Grader Score</div>
+                <div style="font-size: 2rem; font-weight: 900; color: {color};">{pct}%</div>
             </div>
-            {progress_bar("Investigation (30%)", score, 30, color)}
-            {progress_bar("Planning (50%)", score, 50, color)}
-            {progress_bar("Process (20%)", score, 20, color)}
-            <div style="text-align: center; margin-top: 12px;">
-                <span style="background: {'rgba(16,185,129,0.2)' if is_resolved else '#27272a'}; color: {'#34d399' if is_resolved else '#71717a'}; padding: 4px 12px; border-radius: 999px; font-size: 10px; font-weight: 800;">
+            {progress_bar("Investigation", score, color)}
+            {progress_bar("Planning", score, color)}
+            {progress_bar("Process", score, color)}
+            <div style="text-align: center; margin-top: 16px;">
+                <span style="background: {'rgba(16,185,129,0.15)' if is_resolved else 'rgba(39,39,42,0.8)'}; color: {'#34d399' if is_resolved else '#71717a'}; padding: 6px 16px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 1px solid {'rgba(16,185,129,0.3)' if is_resolved else '#27272a'};">
                     { "✅ RESOLVED" if is_resolved else "🔄 IN PROGRESS" }
                 </span>
             </div>
         </div>
         '''
     else:
-        html += f'''<div style="border-top: 1px solid #3f3f46; padding-top: 20px; opacity: 0.4;">
-            {progress_bar("Investigation", 0, 30)}
-            {progress_bar("Planning", 0, 50)}
-            {progress_bar("Process", 0, 20)}
+        html += f'''<div style="opacity: 0.3;">
+            {progress_bar("Investigation", 0, '#3f3f46')}
+            {progress_bar("Planning", 0, '#3f3f46')}
+            {progress_bar("Process", 0, '#3f3f46')}
         </div>'''
     html += "</div>"
     return html
@@ -429,10 +430,11 @@ def execute_command(command: str, terminal_log: str, env: SprintBoardEnvironment
 
 # ── Gradio UI Build ───────────────────────────────────────────────────────────
 
-THEME = gr.themes.Base(
+THEME = gr.themes.Soft(
     primary_hue="violet",
     secondary_hue="zinc",
     neutral_hue="zinc",
+    font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
 )
 
 def build_ui():
@@ -497,17 +499,21 @@ def build_ui():
                 gr.Markdown("### 🏆 Performance Tracker")
                 score_display = gr.HTML(value=_format_score_initial())
                 
-                with gr.Accordion("📖 Command Reference", open=False):
+                with gr.Accordion("📖 Command Reference", open=True):
                     gr.Markdown("""
-**Investigation:**
-- LIST_BACKLOG
-- VIEW_STORY <id>
-- VIEW_TEAM
+**Investigation Commands**
+`LIST_BACKLOG`
+`VIEW_STORY <id>`
+`VIEW_TEAM`
+`VIEW_VELOCITY`
+`CHECK_DEPS <id>`
 
-**Planning:**
-- ESTIMATE <id> <pts>
-- ASSIGN <id> <name>
-- FINALIZE_SPRINT
+**Planning Commands**
+`ESTIMATE <id> <points>`
+`ASSIGN <id> <developer>`
+`ADD_TO_SPRINT <id>`
+`REMOVE_FROM_SPRINT <id>`
+`FINALIZE_SPRINT`
 """)
 
                 btn_reset = gr.Button("↺  RESET EPISODE", variant="secondary", elem_classes=["btn-secondary"])
