@@ -30,16 +30,18 @@ DIFFICULTY_EMOJIS = {
 
 # ── Custom CSS ──────────────────────────────────────────────────────
 CSS = """
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
     --primary: #8b5cf6;
-    --primary-glow: rgba(139, 92, 246, 0.4);
+    --primary-hover: #7c3aed;
     --bg-dark: #09090b;
-    --card-bg: rgba(24, 24, 27, 0.6);
-    --border: rgba(39, 39, 42, 1);
+    --card-bg: rgba(24, 24, 27, 0.7);
+    --border: rgba(39, 39, 42, 0.8);
     --text-main: #f4f4f5;
     --text-muted: #a1a1aa;
+    --terminal-bg: #000000;
+    --terminal-cyan: #22d3ee;
 }
 
 body, .gradio-container {
@@ -50,92 +52,142 @@ body, .gradio-container {
 
 .panel-glass {
     background: var(--card-bg) !important;
-    backdrop-filter: blur(12px) !important;
+    backdrop-filter: blur(16px) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 12px !important;
-    padding: 20px !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 #header {
     background: linear-gradient(135deg, #1e1b4b 0%, #09090b 100%);
-    border-bottom: 1px solid #7c3aed44;
-    padding: 24px 32px;
-    border-radius: 16px;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    padding: 32px;
+    border-radius: 20px;
     margin-bottom: 24px;
+    text-align: left;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 #header h1 {
     color: #fff;
-    font-size: 2.2rem;
+    font-size: 2.8rem;
     font-weight: 800;
     margin: 0;
-    letter-spacing: -1px;
+    letter-spacing: -2px;
+    background: linear-gradient(to right, #ffffff 0%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 #header p {
     color: var(--text-muted);
-    margin: 4px 0 0 0;
-    font-size: 0.9rem;
+    margin: 8px 0 0 0;
+    font-size: 1.1rem;
+    font-weight: 500;
 }
 
-#terminal-log textarea {
-    background: #000 !important;
-    color: #22d3ee !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.85rem !important;
-    border: 1px solid #27272a !important;
-    border-radius: 0 0 12px 12px !important;
-    padding: 16px !important;
-    line-height: 1.6 !important;
-}
 .terminal-window {
+    background: var(--terminal-bg) !important;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid #3f3f46;
+    display: flex;
+    flex-direction: column;
 }
 .terminal-header {
-    background: #27272a;
-    padding: 8px 16px;
+    background: #18181b;
+    padding: 10px 16px;
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
+    border-bottom: 1px solid #27272a;
 }
-.dot { width: 10px; height: 10px; border-radius: 50%; }
-.dot.red { background: #ef4444; }
-.dot.amber { background: #f59e0b; }
-.dot.green { background: #22c55e; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.red { background: #ff5f56; }
+.dot.amber { background: #ffbd2e; }
+.dot.green { background: #27c93f; }
+.terminal-title {
+    color: #71717a;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+#terminal-log-wrapper {
+    height: 520px !important;
+    overflow-y: auto !important;
+    padding: 0 !important;
+    background: #000 !important;
+    scrollbar-width: thin;
+    scrollbar-color: #27272a transparent;
+}
+#terminal-log-wrapper pre {
+    margin: 0;
+    padding: 24px;
+    color: var(--terminal-cyan);
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 13px !important;
+    line-height: 1.6;
+    white-space: pre !important;
+    overflow-x: auto;
+    background: transparent !important;
+}
 
 #cmd-input textarea {
     background: #18181b !important;
     color: #fff !important;
     border: 1px solid #3f3f46 !important;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     font-family: 'JetBrains Mono', monospace !important;
-    padding: 12px 16px !important;
+    padding: 14px 18px !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease;
 }
+#cmd-input textarea:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important;
+}
+
 .btn-primary {
     background: var(--primary) !important;
     color: white !important;
     border: none !important;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     font-weight: 700 !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3) !important;
 }
 .btn-primary:hover {
-    transform: translateY(-1px) !important;
-    filter: brightness(1.1);
+    transform: translateY(-2px) !important;
+    background: var(--primary-hover) !important;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4) !important;
 }
 .btn-secondary {
-    background: #27272a !important;
+    background: #18181b !important;
     color: var(--text-main) !important;
     border: 1px solid #3f3f46 !important;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
+    transition: all 0.2s ease !important;
 }
+.btn-secondary:hover {
+    background: #27272a !important;
+    border-color: #52525b !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 
 label {
     color: var(--primary) !important;
-    font-size: 0.75rem !important;
-    font-weight: 800 !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.1em !important;
+    letter-spacing: 0.05em !important;
+    margin-bottom: 8px !important;
+    display: block !important;
 }
 """
 
@@ -153,6 +205,26 @@ def _task_choices():
     return choices
 
 # ── Formatting functions ──────────────────────────────────────────────────────
+
+def _render_terminal(text: str) -> str:
+    """Wraps text in a pre tag for terminal-style rendering."""
+    import html
+    escaped = html.escape(text)
+    return f'''
+    <div id="terminal-log-wrapper">
+        <pre id="terminal-content">{escaped}</pre>
+        <script>
+            (function() {{
+                var el = document.getElementById("terminal-log-wrapper");
+                if (el) {{
+                    el.scrollTop = el.scrollHeight;
+                    // Double check after a frame for layout changes
+                    requestAnimationFrame(() => {{ el.scrollTop = el.scrollHeight; }});
+                }}
+            }})();
+        </script>
+    </div>
+    '''
 
 def _format_metrics(metrics: dict) -> str:
     if not metrics:
@@ -304,52 +376,55 @@ def start_task(task_id: str, env: SprintBoardEnvironment):
     emoji = DIFFICULTY_EMOJIS[diff]
 
     terminal_log = (
-        f"WELCOME TO SPRINTBOARD v2.0\\n"
-        f"Session: Planning Episode\\n"
-        f"Task   : {task['name']}\\n"
-        f"Target : {diff.upper()} difficulty\\n"
-        f"─────────────────────────────────────────────\\n\\n"
-        f"📋 SCENARIO ALERT:\\n{obs.alert}\\n\\n"
-        f"─────────────────────────────────────────────\\n"
-        f"{obs.command_output}\\n\\n"
-        f"Ready for input...\\n"
+        f"WELCOME TO SPRINTBOARD v2.0\n"
+        f"Session: Planning Episode\n"
+        f"Task   : {task['name']}\n"
+        f"Target : {diff.upper()} difficulty\n"
+        f"─────────────────────────────────────────────\n\n"
+        f"📋 SCENARIO ALERT:\n{obs.alert}\n\n"
+        f"─────────────────────────────────────────────\n"
+        f"{obs.command_output}\n\n"
+        f"Ready for input...\n"
     )
 
     return (
-        terminal_log,
+        _render_terminal(terminal_log),
         _format_metrics(obs.metrics),
         _format_score_initial(),
         f"Step 0 / {obs.max_steps}",
         obs.alert,
+        terminal_log,
     )
 
 def execute_command(command: str, terminal_log: str, env: SprintBoardEnvironment):
     command = command.strip()
     if not command:
-        return terminal_log, _format_metrics(env.board.metrics), _format_score_initial(), "", ""
+        return _render_terminal(terminal_log), _format_metrics(env.board.metrics), _format_score_initial(), "", "", terminal_log
 
     action = SprintAction(command=command)
     obs = env.step(action)
 
     separator = "─" * 45
-    new_entry = f"\\n{separator}\\n$ {command}\\n"
+    new_entry = f"\n{separator}\n$ {command}\n"
     if obs.error:
-        new_entry += f"⚠ ERROR: {obs.error}\\n"
+        new_entry += f"⚠ ERROR: {obs.error}\n"
     elif obs.command_output:
-        new_entry += f"{obs.command_output}\\n"
+        new_entry += f"{obs.command_output}\n"
 
     if obs.done:
         grade = obs.metadata.get("grader_score", 0.0) or 0.0
         pct = int(grade * 100)
         verdict = "🏆 EXCELLENT" if grade >= 0.8 else ("✅ GOOD" if grade >= 0.6 else "⚠️ NEEDS WORK")
-        new_entry += f"\\n{'═' * 45}\\n  EPISODE COMPLETE\\n  Final Score: {pct}%  {verdict}\\n{'═' * 45}\\n"
+        new_entry += f"\n{'═' * 45}\n  EPISODE COMPLETE\n  Final Score: {pct}%  {verdict}\n{'═' * 45}\n"
 
+    updated_log = terminal_log + new_entry
     return (
-        terminal_log + new_entry,
+        _render_terminal(updated_log),
         _format_metrics(obs.metrics),
         _format_score(obs),
         f"Step {obs.step_number} / {obs.max_steps}",
-        ""
+        "",
+        updated_log,
     )
 
 # ── Gradio UI Build ───────────────────────────────────────────────────────────
@@ -370,6 +445,7 @@ def build_ui():
         """)
 
         env_state = gr.State(_make_env)
+        raw_terminal_state = gr.State("")
 
         with gr.Row():
             with gr.Column(scale=1, min_width=320):
@@ -386,14 +462,17 @@ def build_ui():
 
             with gr.Column(scale=3):
                 with gr.Column(elem_classes=["terminal-window"]):
-                    gr.HTML("""<div class="terminal-header"><div class="dot red"></div><div class="dot amber"></div><div class="dot green"></div></div>""")
-                    terminal_log = gr.Textbox(
-                        value="Welcome to SprintBoard Terminal.\\\\nWaiting for initialization...\\\\n",
-                        lines=22, max_lines=22, interactive=False, elem_id="terminal-log", show_label=False, autoscroll=True
+                    gr.HTML("""<div class="terminal-header">
+                        <div class="dot red"></div><div class="dot amber"></div><div class="dot green"></div>
+                        <div class="terminal-title">SPRINTBOARD TERMINAL - v2.0</div>
+                    </div>""")
+                    terminal_log = gr.HTML(
+                        value=_render_terminal("Welcome to SprintBoard Terminal.\nWaiting for initialization...\n"),
+                        elem_id="terminal-outer"
                     )
 
                 with gr.Row():
-                    step_display = gr.HTML(value="<div style='color:#71717a;font-size:12px;padding:8px;'>Step 0 / --</div>")
+                    step_display = gr.HTML(value="<div style='color:#71717a;font-size:12px;padding:8px;font-family:\"JetBrains Mono\"'>Step 0 / --</div>")
 
                 with gr.Row():
                     cmd_input = gr.Textbox(placeholder="Enter command...", scale=4, interactive=True, elem_id="cmd-input", show_label=False)
@@ -436,38 +515,38 @@ def build_ui():
         # ── Event Wiring ──────────────────────────────────────────────────────
 
         def on_start(task_id, env):
-            log, met, sco, stp, alrt = start_task(task_id, env)
-            return log, met, sco, stp, alrt, _format_sprint_manifest(env.board)
+            log_html, met, sco, stp, alrt, raw_log = start_task(task_id, env)
+            return log_html, met, sco, stp, alrt, _format_sprint_manifest(env.board), raw_log
 
-        btn_start.click(fn=on_start, inputs=[task_selector, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, sprint_manifest])
+        btn_start.click(fn=on_start, inputs=[task_selector, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, sprint_manifest, raw_terminal_state])
 
-        def on_action(cmd, log, env):
-            updated_log, met, sco, stp, _ = execute_command(cmd, log, env)
-            is_done = "EPISODE COMPLETE" in updated_log
-            return updated_log, met, sco, stp, _format_sprint_manifest(env.board, is_done=is_done), ""
+        def on_action(cmd, raw_log, env):
+            log_html, met, sco, stp, _, updated_raw_log = execute_command(cmd, raw_log, env)
+            is_done = "EPISODE COMPLETE" in updated_raw_log
+            return log_html, met, sco, stp, _format_sprint_manifest(env.board, is_done=is_done), "", updated_raw_log
 
-        btn_exec.click(fn=on_action, inputs=[cmd_input, terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
-        cmd_input.submit(fn=on_action, inputs=[cmd_input, terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
+        btn_exec.click(fn=on_action, inputs=[cmd_input, raw_terminal_state, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input, raw_terminal_state])
+        cmd_input.submit(fn=on_action, inputs=[cmd_input, raw_terminal_state, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input, raw_terminal_state])
 
-        q_btn_backlog.click(fn=lambda l, e: on_action("LIST_BACKLOG", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
-        q_btn_team.click(fn=lambda l, e: on_action("VIEW_TEAM", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
-        q_btn_vel.click(fn=lambda l, e: on_action("VIEW_VELOCITY", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
-        q_btn_sprint.click(fn=lambda l, e: on_action("VIEW_SPRINT", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
+        q_btn_backlog.click(fn=lambda l, e: on_action("LIST_BACKLOG", l, e), inputs=[raw_terminal_state, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input, raw_terminal_state])
+        q_btn_team.click(fn=lambda l, e: on_action("VIEW_TEAM", l, e), inputs=[raw_terminal_state, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input, raw_terminal_state])
+        q_btn_vel.click(fn=lambda l, e: on_action("VIEW_VELOCITY", l, e), inputs=[raw_terminal_state, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input, raw_terminal_state])
+        q_btn_sprint.click(fn=lambda l, e: on_action("VIEW_SPRINT", l, e), inputs=[raw_terminal_state, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input, raw_terminal_state])
 
         def on_reset(task_id):
             env = _make_env()
-            log, met, sco, stp, alrt = start_task(task_id, env)
-            return log, met, sco, stp, alrt, env, _format_sprint_manifest(env.board)
+            log_html, met, sco, stp, alrt, raw_log = start_task(task_id, env)
+            return log_html, met, sco, stp, alrt, env, _format_sprint_manifest(env.board), raw_log
 
-        btn_reset.click(fn=on_reset, inputs=[task_selector], outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, env_state, sprint_manifest])
+        btn_reset.click(fn=on_reset, inputs=[task_selector], outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, env_state, sprint_manifest, raw_terminal_state])
 
         def on_autosolve(task_id, env):
             from sprint_planning_env.agent import run_agent
             fresh_env = _make_env()
-            for log, met, sco, stp, is_terminal in run_agent(fresh_env, task_id, _format_metrics, _format_score, _format_score_initial):
-                yield log, met, sco, stp, fresh_env, _format_sprint_manifest(fresh_env.board, is_done=is_terminal)
+            for raw_log, met, sco, stp, is_terminal in run_agent(fresh_env, task_id, _format_metrics, _format_score, _format_score_initial):
+                yield _render_terminal(raw_log), met, sco, stp, fresh_env, _format_sprint_manifest(fresh_env.board, is_done=is_terminal), raw_log
 
-        btn_autosolve.click(fn=on_autosolve, inputs=[task_selector, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, env_state, sprint_manifest])
+        btn_autosolve.click(fn=on_autosolve, inputs=[task_selector, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, env_state, sprint_manifest, raw_terminal_state])
 
     return demo
 
