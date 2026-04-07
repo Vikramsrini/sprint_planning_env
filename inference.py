@@ -128,30 +128,23 @@ async def async_main():
     
     # ── Environment Connection Logic ──
     # Priority: 1. ENV_URL 2. LOCAL_IMAGE_NAME 3. localhost:7860 (Hugging Face / Gradio default)
-    env_url = os.getenv("ENV_URL")
+    env_url = os.getenv("ENV_URL") or "http://localhost:7860"
     
-    try:
-        if env_url:
-            print(f"[INFO] Connecting to environment at {env_url}")
-            async with SprintBoardEnv(url=env_url) as env:
+    print(f"[INFO] Connecting to environment at {env_url}")
+    # Give the server a few seconds to start in case of container lag
+    for attempt in range(5):
+        try:
+            async with SprintBoardEnv(base_url=env_url) as env:
                 for i in range(1, 16):
                     await run_episode(env, client, f"task_{i}")
-        elif LOCAL_IMAGE_NAME:
-            print(f"[INFO] Starting environment from image: {LOCAL_IMAGE_NAME}")
-            async with SprintBoardEnv.from_docker_image(LOCAL_IMAGE_NAME) as env:
-                for i in range(1, 16):
-                    await run_episode(env, client, f"task_{i}")
-        else:
-            # Match EXPOSE 7860 in Dockerfile
-            default_url = "http://localhost:7860"
-            print(f"[INFO] Falling back to {default_url}")
-            async with SprintBoardEnv(url=default_url) as env:
-                for i in range(1, 16):
-                    await run_episode(env, client, f"task_{i}")
-    except Exception as e:
-        print(f"[FATAL ERROR] Could not connect to environment: {e}")
-        # Ensure we don't return 0 if we failed to even connect
-        sys.exit(1)
+            return # Successful run
+        except Exception as e:
+            print(f"[INFO] Connection attempt {attempt + 1} failed: {e}")
+            if attempt < 4:
+                await asyncio.sleep(3)
+            else:
+                print(f"[FATAL ERROR] Could not connect to environment after 5 attempts: {e}")
+                sys.exit(1)
 
 if __name__ == "__main__":
     try:
