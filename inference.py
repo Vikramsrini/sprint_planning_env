@@ -127,26 +127,37 @@ async def async_main():
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY or "dummy")
     
     # ── Environment Connection Logic ──
-    # Priority: 1. ENV_URL 2. LOCAL_IMAGE_NAME 3. localhost:8000
+    # Priority: 1. ENV_URL 2. LOCAL_IMAGE_NAME 3. localhost:7860 (Hugging Face / Gradio default)
     env_url = os.getenv("ENV_URL")
     
-    if env_url:
-        print(f"[INFO] Connecting to environment at {env_url}")
-        async with SprintBoardEnv(url=env_url) as env:
-            for tid in [f"task_{i}" for i in range(1, 16)]:
-                await run_episode(env, client, tid)
-    elif LOCAL_IMAGE_NAME:
-        print(f"[INFO] Starting environment from image: {LOCAL_IMAGE_NAME}")
-        async with SprintBoardEnv.from_docker_image(LOCAL_IMAGE_NAME) as env:
-            for tid in [f"task_{i}" for i in range(1, 16)]:
-                await run_episode(env, client, tid)
-    else:
-        # Default fallback for most evaluators: localhost server
-        default_url = "http://localhost:8000"
-        print(f"[INFO] No ENV_URL or LOCAL_IMAGE_NAME, falling back to {default_url}")
-        async with SprintBoardEnv(url=default_url) as env:
-            for tid in [f"task_{i}" for i in range(1, 16)]:
-                await run_episode(env, client, tid)
+    try:
+        if env_url:
+            print(f"[INFO] Connecting to environment at {env_url}")
+            async with SprintBoardEnv(url=env_url) as env:
+                for i in range(1, 16):
+                    await run_episode(env, client, f"task_{i}")
+        elif LOCAL_IMAGE_NAME:
+            print(f"[INFO] Starting environment from image: {LOCAL_IMAGE_NAME}")
+            async with SprintBoardEnv.from_docker_image(LOCAL_IMAGE_NAME) as env:
+                for i in range(1, 16):
+                    await run_episode(env, client, f"task_{i}")
+        else:
+            # Match EXPOSE 7860 in Dockerfile
+            default_url = "http://localhost:7860"
+            print(f"[INFO] Falling back to {default_url}")
+            async with SprintBoardEnv(url=default_url) as env:
+                for i in range(1, 16):
+                    await run_episode(env, client, f"task_{i}")
+    except Exception as e:
+        print(f"[FATAL ERROR] Could not connect to environment: {e}")
+        # Ensure we don't return 0 if we failed to even connect
+        sys.exit(1)
 
 if __name__ == "__main__":
-    asyncio.run(async_main())
+    try:
+        asyncio.run(async_main())
+    except KeyboardInterrupt:
+        sys.exit(0)
+    except Exception as e:
+        print(f"[UNHANDLED EXCEPTION] {e}")
+        sys.exit(1)
