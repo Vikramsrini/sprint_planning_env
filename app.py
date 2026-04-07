@@ -709,12 +709,11 @@ FINALIZE_SPRINT
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+import uvicorn
+from sprint_planning_env.server.app import app as openenv_app
+
+demo = build_ui()
+app = gr.mount_gradio_app(openenv_app, demo, path="/")
+
 if __name__ == "__main__":
-    demo = build_ui()
-    
-    import uvicorn
-    from sprint_planning_env.server.app import app as openenv_app
-    
-    app = gr.mount_gradio_app(openenv_app, demo, path="/")
-    
     uvicorn.run(app, host="0.0.0.0", port=7860)

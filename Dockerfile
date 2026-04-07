@@ -12,8 +12,8 @@ COPY . .
 # Install the package in editable mode
 RUN pip install -e .
 
-ENV PORT=8000
-EXPOSE 8000
+ENV PORT=7860
+EXPOSE 7860
 
-# Start the OpenEnv server
-CMD ["python", "server/app.py"]
+# Start the unified OpenEnv API + Gradio UI server
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
