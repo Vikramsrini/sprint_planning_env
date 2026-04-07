@@ -3,15 +3,7 @@ SprintBoard — Gradio Playground for Hugging Face Spaces.
 
 This file is the HF Spaces entry point. It creates a professional
 interactive UI where anyone can select a sprint planning task,
-type planning commands, and see the board respond in real time —
-no local setup required.
-
-Layout:
-  - Left panel:  Task selector, scenario alert, live board metrics
-  - Center:      Terminal-style command log (all commands + outputs)
-  - Right panel: Score tracker with 3-axis grading breakdown
-
-The environment runs in-process (no HTTP server) for simplicity.
+type planning commands, and see the board respond in real time.
 """
 
 import sys
@@ -23,17 +15,12 @@ sys.path.insert(0, os.path.dirname(__file__))
 import gradio as gr
 from typing import Optional
 
-# In-process environment (no HTTP server needed for UI)
+# In-process environment
 from sprint_planning_env.server.environment import SprintBoardEnvironment
 from sprint_planning_env.server.tasks import TASK_REGISTRY
 from sprint_planning_env.models import SprintAction
 
-# ── Colour palette ──────────────────────────────────────────────────
-DIFFICULTY_COLOURS = {
-    "easy":   "#22c55e",   # green
-    "medium": "#f59e0b",   # amber
-    "hard":   "#ef4444",   # red
-}
+# ── Metadata ────────────────────────────────────────────────────────
 
 DIFFICULTY_EMOJIS = {
     "easy": "🟢",
@@ -43,157 +30,121 @@ DIFFICULTY_EMOJIS = {
 
 # ── Custom CSS ──────────────────────────────────────────────────────
 CSS = """
-/* ── Global ── */
-body, .gradio-container {
-    background: #0f0f13 !important;
-    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace !important;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+    --primary: #8b5cf6;
+    --primary-glow: rgba(139, 92, 246, 0.4);
+    --bg-dark: #09090b;
+    --card-bg: rgba(24, 24, 27, 0.6);
+    --border: rgba(39, 39, 42, 1);
+    --text-main: #f4f4f5;
+    --text-muted: #a1a1aa;
 }
 
-/* ── Header ── */
+body, .gradio-container {
+    background: var(--bg-dark) !important;
+    font-family: 'Inter', sans-serif !important;
+    color: var(--text-main) !important;
+}
+
+.panel-glass {
+    background: var(--card-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+}
+
 #header {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    background: linear-gradient(135deg, #1e1b4b 0%, #09090b 100%);
     border-bottom: 1px solid #7c3aed44;
-    padding: 20px 32px;
-    border-radius: 12px 12px 0 0;
+    padding: 24px 32px;
+    border-radius: 16px;
+    margin-bottom: 24px;
 }
 #header h1 {
-    color: #a78bfa;
-    font-size: 2rem;
+    color: #fff;
+    font-size: 2.2rem;
+    font-weight: 800;
     margin: 0;
-    letter-spacing: -0.5px;
+    letter-spacing: -1px;
 }
 #header p {
-    color: #64748b;
+    color: var(--text-muted);
     margin: 4px 0 0 0;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
 }
 
-/* ── Scenario alert box ── */
-.alert-box {
-    background: linear-gradient(135deg, #1e1b4b 0%, #1a1a2e 100%);
-    border: 1px solid #7c3aed55;
-    border-left: 4px solid #7c3aed;
-    border-radius: 8px;
-    padding: 14px 16px;
-    color: #c4b5fd;
-    font-size: 0.82rem;
-    line-height: 1.6;
-}
-
-/* ── Terminal log ── */
 #terminal-log textarea {
-    background: #0a0a0f !important;
+    background: #000 !important;
     color: #22d3ee !important;
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.78rem !important;
-    border: 1px solid #1e293b !important;
-    border-radius: 8px !important;
-    padding: 12px !important;
-    line-height: 1.5 !important;
+    font-size: 0.85rem !important;
+    border: 1px solid #27272a !important;
+    border-radius: 0 0 12px 12px !important;
+    padding: 16px !important;
+    line-height: 1.6 !important;
 }
+.terminal-window {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #3f3f46;
+}
+.terminal-header {
+    background: #27272a;
+    padding: 8px 16px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot.red { background: #ef4444; }
+.dot.amber { background: #f59e0b; }
+.dot.green { background: #22c55e; }
 
-/* ── Command input ── */
 #cmd-input textarea {
-    background: #0f172a !important;
-    color: #f1f5f9 !important;
-    border: 2px solid #7c3aed !important;
-    border-radius: 8px !important;
+    background: #18181b !important;
+    color: #fff !important;
+    border: 1px solid #3f3f46 !important;
+    border-radius: 10px !important;
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.9rem !important;
-    padding: 10px 14px !important;
+    padding: 12px 16px !important;
 }
-#cmd-input textarea:focus {
-    border-color: #a78bfa !important;
-    box-shadow: 0 0 0 3px #7c3aed33 !important;
-}
-
-/* ── Buttons ── */
-#btn-execute {
-    background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+.btn-primary {
+    background: var(--primary) !important;
     color: white !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     font-weight: 700 !important;
-    font-size: 0.9rem !important;
-    padding: 10px 24px !important;
-    cursor: pointer !important;
     transition: all 0.2s ease !important;
 }
-#btn-execute:hover {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+.btn-primary:hover {
     transform: translateY(-1px) !important;
+    filter: brightness(1.1);
 }
-#btn-reset {
-    background: #1e293b !important;
-    color: #94a3b8 !important;
-    border: 1px solid #334155 !important;
-    border-radius: 8px !important;
-    font-size: 0.9rem !important;
-}
-#btn-reset:hover {
-    background: #334155 !important;
-    color: #e2e8f0 !important;
+.btn-secondary {
+    background: #27272a !important;
+    color: var(--text-main) !important;
+    border: 1px solid #3f3f46 !important;
+    border-radius: 10px !important;
 }
 
-/* ── Score card ── */
-#score-box {
-    background: #0f172a;
-    border: 1px solid #1e293b;
-    border-radius: 8px;
-    padding: 16px;
-}
-
-/* ── Metrics ── */
-.metric-card {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 6px;
-    padding: 8px 12px;
-    margin: 4px 0;
-    color: #94a3b8;
-    font-size: 0.78rem;
-}
-
-/* ── Task dropdown ── */
-#task-select select {
-    background: #1e293b !important;
-    color: #e2e8f0 !important;
-    border: 1px solid #334155 !important;
-    border-radius: 8px !important;
-}
-
-/* ── Step counter ── */
-#step-counter {
-    color: #64748b;
-    font-size: 0.75rem;
-    text-align: right;
-    padding: 4px 8px;
-}
-
-/* ── Labels ── */
 label {
-    color: #7c3aed !important;
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
+    color: var(--primary) !important;
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
+    letter-spacing: 0.1em !important;
 }
-
-/* ── Diff colours in terminal ── */
-.green { color: #22c55e; }
-.red   { color: #ef4444; }
-.blue  { color: #3b82f6; }
 """
 
 # ── State management ─────────────────────────────────────────────────────────
-# Each Gradio session holds its own environment instance via gr.State.
 
 def _make_env():
-    """Create a fresh environment instance per session."""
     return SprintBoardEnvironment()
 
 def _task_choices():
-    """Build dropdown choices: 'task_1 — Unestimated Stories [🟢 Easy]'"""
     choices = []
     for tid, task in TASK_REGISTRY.items():
         emoji = DIFFICULTY_EMOJIS[task["difficulty"]]
@@ -201,513 +152,326 @@ def _task_choices():
         choices.append((label, tid))
     return choices
 
-# ── Core logic ────────────────────────────────────────────────────────────────
-
-def start_task(task_id: str, env: SprintBoardEnvironment):
-    """Reset environment and start a new task episode."""
-    obs = env.reset(task_id=task_id)
-    task = TASK_REGISTRY[task_id]
-    diff = task["difficulty"]
-    colour = DIFFICULTY_COLOURS[diff]
-    emoji = DIFFICULTY_EMOJIS[diff]
-
-    terminal_log = (
-        f"╔══════════════════════════════════════════╗\n"
-        f"║  SprintBoard  ·  {task['name']:<26}║\n"
-        f"║  Difficulty: {emoji} {diff.upper():<30}║\n"
-        f"╚══════════════════════════════════════════╝\n\n"
-        f"📋 SCENARIO:\n{obs.alert}\n\n"
-        f"─────────────────────────────────────────────\n"
-        f"{obs.command_output}\n\n"
-        f"Type your first command below ↓\n"
-    )
-
-    metrics_text = _format_metrics(obs.metrics)
-    score_text = _format_score_initial()
-    step_info = f"Step 0 / {obs.max_steps}"
-
-    return (
-        terminal_log,
-        metrics_text,
-        score_text,
-        step_info,
-        obs.alert,  # store alert in state
-    )
-
-
-def execute_command(
-    command: str,
-    terminal_log: str,
-    env: SprintBoardEnvironment,
-):
-    """Execute a planning command and update the UI."""
-    command = command.strip()
-    if not command:
-        return terminal_log, "", "", "⚠ Please enter a command.", ""
-
-    action = SprintAction(command=command)
-    obs = env.step(action)
-
-    # Build terminal entry
-    separator = "─" * 45
-    cmd_line   = f"$ {command}"
-    output     = obs.command_output or ""
-    error      = obs.error or ""
-
-    new_entry = f"\n{separator}\n{cmd_line}\n"
-    if error:
-        new_entry += f"⚠  {error}\n"
-    elif output:
-        new_entry += f"{output}\n"
-
-    if obs.done:
-        grade = obs.metadata.get("grader_score", 0.0) or 0.0
-        pct   = int(grade * 100)
-        if grade >= 0.8:
-            verdict = "🏆 EXCELLENT"
-        elif grade >= 0.6:
-            verdict = "✅ GOOD"
-        elif grade >= 0.4:
-            verdict = "⚠️ PARTIAL"
-        else:
-            verdict = "❌ NEEDS WORK"
-
-        new_entry += (
-            f"\n{'═' * 45}\n"
-            f"  EPISODE COMPLETE\n"
-            f"  Final Score: {pct}%  {verdict}\n"
-            f"{'═' * 45}\n"
-        )
-
-    updated_log = terminal_log + new_entry
-    metrics_text = _format_metrics(obs.metrics)
-    score_text = _format_score(obs)
-    step_info = f"Step {obs.step_number} / {obs.max_steps}"
-
-    # Clear input after execution
-    cleared_cmd = ""
-    return updated_log, metrics_text, score_text, step_info, cleared_cmd
-
+# ── Formatting functions ──────────────────────────────────────────────────────
 
 def _format_metrics(metrics: dict) -> str:
-    """Format board metrics as a readable string."""
     if not metrics:
-        return "No metrics yet. Start a task to see live board data."
+        return "<div style='color:#71717a;font-style:italic;padding:20px;text-align:center;'>Start a task to see metrics...</div>"
 
-    total_pts  = metrics.get("total_points", 0)
-    avg_vel    = metrics.get("avg_velocity", 0)
-    ratio      = metrics.get("velocity_ratio", 0)
-    stories    = metrics.get("sprint_stories", 0)
-    unest      = metrics.get("unestimated_count", 0)
-    unassigned = metrics.get("unassigned_count", 0)
-    overloaded = metrics.get("overloaded_developers", [])
-    dep_issues = metrics.get("dependency_issues", 0)
-    risks      = metrics.get("risk_flags", 0)
-    finalized  = metrics.get("finalized", False)
+    total_pts  = metrics.get('total_points', 0)
+    ratio      = metrics.get('velocity_ratio', 0)
+    stories    = metrics.get('sprint_stories', 0)
+    unest      = metrics.get('unestimated_count', 0)
+    unassigned = metrics.get('unassigned_count', 0)
+    dep_issues = metrics.get('dependency_issues', 0)
+    risks      = metrics.get('risk_flags', 0)
+    overloaded = metrics.get('overloaded_developers', [])
+    finalized  = metrics.get('finalized', False)
 
-    vel_bar = "█" * int(min(ratio, 2) * 10) if avg_vel else ""
-    vel_icon = "🔴" if ratio > 1.15 else ("🟡" if ratio > 0.95 else "🟢")
+    vel_color = '#22c55e' if ratio <= 1.0 else ('#f59e0b' if ratio <= 1.15 else '#ef4444')
+    
+    def metric_pill(label, value, icon, color=None, warning=False):
+        bg = color if color else 'rgba(39, 39, 42, 0.5)'
+        if warning and value > 0:
+            bg = 'rgba(127, 29, 29, 0.4)'
+            border = '1px solid rgba(239, 68, 68, 0.4)'
+        else:
+            border = '1px solid rgba(63, 63, 70, 0.4)'
+        return f'''
+        <div style="background: {bg}; border: {border}; padding: 10px; border-radius: 10px; flex: 1; min-width: 80px;">
+            <div style="font-size: 9px; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">{icon} {label}</div>
+            <div style="font-size: 1.1rem; color: #fff; font-weight: 800;">{value}</div>
+        </div>
+        '''
 
-    lines = [
-        f"📊 BOARD METRICS",
-        f"",
-        f"Sprint Stories    : {stories}",
-        f"Total Points      : {total_pts} pts",
-        f"Avg Velocity      : {avg_vel} pts/sprint",
-        f"Velocity Ratio    : {ratio:.2f}x  {vel_icon}",
-        f"",
-        f"⚠ Unestimated    : {unest}",
-        f"⚠ Unassigned     : {unassigned}",
-        f"⚠ Dep Issues     : {dep_issues}",
-        f"⚠ Risk Flags     : {risks}",
-    ]
-
+    html = f'''
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            {metric_pill('Stories', stories, '📋')}
+            {metric_pill('Pts', total_pts, '🎯')}
+            {metric_pill('Velocity', f'{ratio:.2f}x', '⚡', color=f'{vel_color}33')}
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            {metric_pill('Estimates', unest, '❓', warning=True)}
+            {metric_pill('Assigns', unassigned, '👤', warning=True)}
+            {metric_pill('Deps', dep_issues, '🔗', warning=True)}
+            {metric_pill('Risks', risks, '🚩', warning=True)}
+        </div>
+    '''
     if overloaded:
-        lines.append(f"🔴 Overloaded      : {', '.join(overloaded)}")
+        html += f"<div style='background:rgba(127,29,29,0.2); border:1px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px; font-size:10px; color:#fca5a5;'>🔴 <b>Overloaded:</b> {', '.join(overloaded)}</div>"
     if finalized:
-        lines.append(f"\n✅ Sprint FINALIZED")
-
-    return "\n".join(lines)
-
+        html += "<div style='background:rgba(16,185,129,0.2); border:1px solid #10b98144; padding:10px; border-radius:8px; font-size:12px; color:#34d399; text-align:center; font-weight:800;'>✅ SPRINT FINALIZED</div>"
+    html += "</div>"
+    return html
 
 def _format_score(obs) -> str:
-    """Format score display after each step."""
-    meta = obs.metadata or {}
-    cum_reward = meta.get("cumulative_reward", 0.0)
-    grader_score = meta.get("grader_score")
-    is_resolved = meta.get("is_resolved", False)
+    meta = getattr(obs, 'metadata', {}) or {}
+    cum_reward = meta.get('cumulative_reward', 0.0)
+    score = meta.get('grader_score')
+    is_resolved = meta.get('is_resolved', False)
 
-    lines = [
-        "🏆 SCORE TRACKER",
-        "",
-        f"Cumulative Reward : {cum_reward:.3f}",
-        f"Step Reward       : {obs.reward:.3f}" if obs.reward else "",
-        "",
-    ]
+    def progress_bar(label, value, weight, color='#8b5cf6'):
+        pct = int(value * 100) if value is not None else 0
+        return f'''
+        <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #a1a1aa; margin-bottom: 4px;">
+                <span>{label}</span>
+                <span>{pct}%</span>
+            </div>
+            <div style="background: #27272a; height: 6px; border-radius: 3px; overflow: hidden;">
+                <div style="background: {color}; width: {pct}%; height: 100%; transition: width 0.8s ease-out;"></div>
+            </div>
+        </div>
+        '''
 
-    if grader_score is not None:
-        pct = int(grader_score * 100)
-        bar_filled = "█" * (pct // 5)
-        bar_empty  = "░" * (20 - pct // 5)
-        lines += [
-            "─── FINAL GRADE ───",
-            f"Score: {pct}%",
-            f"[{bar_filled}{bar_empty}]",
-            "",
-            f"Investigation  (30%): {'●' * int(grader_score * 3)}",
-            f"Planning Q.   (50%): {'●' * int(grader_score * 5)}",
-            f"Process       (20%): {'●' * int(grader_score * 2)}",
-            "",
-            "✅ RESOLVED" if is_resolved else "🔄 IN PROGRESS",
-        ]
+    html = f'''
+    <div style="background: rgba(24, 24, 27, 0.8); border-radius: 12px; padding: 20px; border: 1px solid #3f3f46;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 10px; color: #8b5cf6; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">Reward</div>
+            <div style="font-size: 2.2rem; color: #fff; font-weight: 900;">{cum_reward:.3f}</div>
+        </div>
+    '''
+    if score is not None:
+        pct = int(score * 100)
+        color = '#10b981' if score >= 0.6 else '#f59e0b'
+        html += f'''
+        <div style="border-top: 1px solid #3f3f46; padding-top: 20px;">
+            <div style="text-align: center; margin-bottom: 20px; color: {color};">
+                <div style="font-size: 1.8rem; font-weight: 900;">{pct}%</div>
+            </div>
+            {progress_bar("Investigation (30%)", score, 30, color)}
+            {progress_bar("Planning (50%)", score, 50, color)}
+            {progress_bar("Process (20%)", score, 20, color)}
+            <div style="text-align: center; margin-top: 12px;">
+                <span style="background: {'rgba(16,185,129,0.2)' if is_resolved else '#27272a'}; color: {'#34d399' if is_resolved else '#71717a'}; padding: 4px 12px; border-radius: 999px; font-size: 10px; font-weight: 800;">
+                    { "✅ RESOLVED" if is_resolved else "🔄 IN PROGRESS" }
+                </span>
+            </div>
+        </div>
+        '''
     else:
-        lines += [
-            "─── GRADING ───",
-            "Complete the task to",
-            "see your final score.",
-            "",
-            "Investigation  (30%)",
-            "Planning Q.   (50%)",
-            "Process       (20%)",
-        ]
-
-    return "\n".join(line for line in lines if line is not None)
-
+        html += f'''<div style="border-top: 1px solid #3f3f46; padding-top: 20px; opacity: 0.4;">
+            {progress_bar("Investigation", 0, 30)}
+            {progress_bar("Planning", 0, 50)}
+            {progress_bar("Process", 0, 20)}
+        </div>'''
+    html += "</div>"
+    return html
 
 def _format_score_initial() -> str:
-    return (
-        "🏆 SCORE TRACKER\n\n"
-        "Cumulative Reward : 0.000\n\n"
-        "─── GRADING ───\n"
-        "Complete the task to\n"
-        "see your final score.\n\n"
-        "Investigation  (30%)\n"
-        "Planning Q.   (50%)\n"
-        "Process       (20%)"
-    )
-
+    return _format_score(type('obj', (object,), {'metadata': None, 'reward': 0.0})())
 
 def _format_sprint_manifest(board, is_done: bool = False) -> str:
-    """Create a beautiful HTML manifest of the final sprint plan."""
-    # Show manifest if finalized OR if the episode is done (auto-resolved)
-    is_finalized = getattr(board, "is_finalized", False)
-    
+    is_finalized = getattr(board, 'is_finalized', False)
     if not is_finalized and not is_done:
-        return "<div style='color:#64748b;text-align:center;padding:40px;'>Sprint not finalized yet. Complete your planning and click FINALIZE_SPRINT.</div>"
+        return "<div style='color:#71717a;text-align:center;padding:40px;background:rgba(24,24,27,0.4);border:1px dashed #3f3f46;border-radius:12px;'>Sprint manifest will appear after finalization.</div>"
 
     stories = board._sprint_stories
     team = board._team
     assignments = board._assignments
-
     html = "<div style='display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;'>"
-    
     for name, info in team.items():
         dev_stories = [s for s in stories if assignments.get(s) == name]
         total_pts = sum(board._estimates.get(s, 0) or 0 for s in dev_stories)
-        cap = info["capacity"]
+        cap = info['capacity']
         load_pct = (total_pts / cap * 100) if cap > 0 else 0
-        border_color = "#22c55e" if load_pct <= 100 else "#ef4444"
-        pto_tag = "<span style='background:#ef4444;color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:8px;'>PTO</span>" if name in board._pto_developers else ""
-
-        html += f"""
-        <div style="background:#1e1b4b;border:1px solid {border_color}33;border-top:4px solid {border_color};padding:12px;border-radius:8px;">
-            <div style="font-weight:bold;color:#f1f5f9;display:flex;align-items:center;">
-                👤 {name} {pto_tag}
-            </div>
-            <div style="font-size:11px;color:#94a3b8;margin:4px 0 8px 0;">
-                Points: {total_pts}/{cap} ({load_pct:.0f}%)
-            </div>
-            <div style="display:flex;flex-direction:column;gap:4px;">
-        """
+        color = '#10b981' if load_pct <= 100 else '#ef4444'
+        pto_tag = "<span style='background:#ef4444;color:white;padding:2px 4px;border-radius:3px;font-size:9px;margin-left:6px;'>PTO</span>" if name in board._pto_developers else ""
+        html += f'''
+        <div style="background:rgba(39,39,42,0.3); border:1px solid {color}33; border-top:4px solid {color}; padding: 12px; border-radius: 10px;">
+            <div style="font-weight:800; color:#fff; font-size:13px; margin-bottom:8px;">👤 {name} {pto_tag}</div>
+            <div style="font-size:10px; color:#a1a1aa; margin-bottom:10px;">Load: {total_pts}/{cap} pts</div>
+            <div style="display:flex; flex-direction:column; gap:4px;">'''
         for sid in dev_stories:
-            story = board._stories.get(sid, {})
-            title = story.get("title", sid)
-            pts = board._estimates.get(sid, 0) or "?"
-            html += f"""
-                <div style="background:#0f172a;padding:6px;border-radius:4px;font-size:11px;color:#cbd5e1;">
-                    <span style="color:#7c3aed;font-weight:bold;">{sid}</span> ({pts} pts)
-                    <div style="color:#64748b;margin-top:2px;">{title[:25]}...</div>
-                </div>
-            """
+            title = board._stories.get(sid, {}).get('title', sid)
+            html += f'''
+                <div style="background:rgba(9,9,11,0.4); padding:6px; border-radius:6px; font-size:10px; color:#e4e4e7; border:1px solid #27272a;">
+                    <span style="color:#8b5cf6; font-weight:800;">{sid}</span>: {title[:20]}...
+                </div>'''
         if not dev_stories:
-            html += "<div style='color:#475569;font-size:11px;font-style:italic;'>No stories assigned.</div>"
-        
+            html += "<div style='color:#52525b; font-size:10px; font-style:italic;'>Unassigned</div>"
         html += "</div></div>"
-    
     html += "</div>"
     return html
 
+# ── Core Logic ────────────────────────────────────────────────────────────────
 
-# ── Build the Gradio UI ───────────────────────────────────────────────────────
+def start_task(task_id: str, env: SprintBoardEnvironment):
+    obs = env.reset(task_id=task_id)
+    task = TASK_REGISTRY[task_id]
+    diff = task["difficulty"]
+    emoji = DIFFICULTY_EMOJIS[diff]
+
+    terminal_log = (
+        f"WELCOME TO SPRINTBOARD v2.0\\n"
+        f"Session: Planning Episode\\n"
+        f"Task   : {task['name']}\\n"
+        f"Target : {diff.upper()} difficulty\\n"
+        f"─────────────────────────────────────────────\\n\\n"
+        f"📋 SCENARIO ALERT:\\n{obs.alert}\\n\\n"
+        f"─────────────────────────────────────────────\\n"
+        f"{obs.command_output}\\n\\n"
+        f"Ready for input...\\n"
+    )
+
+    return (
+        terminal_log,
+        _format_metrics(obs.metrics),
+        _format_score_initial(),
+        f"Step 0 / {obs.max_steps}",
+        obs.alert,
+    )
+
+def execute_command(command: str, terminal_log: str, env: SprintBoardEnvironment):
+    command = command.strip()
+    if not command:
+        return terminal_log, _format_metrics(env.board.metrics), _format_score_initial(), "", ""
+
+    action = SprintAction(command=command)
+    obs = env.step(action)
+
+    separator = "─" * 45
+    new_entry = f"\\n{separator}\\n$ {command}\\n"
+    if obs.error:
+        new_entry += f"⚠ ERROR: {obs.error}\\n"
+    elif obs.command_output:
+        new_entry += f"{obs.command_output}\\n"
+
+    if obs.done:
+        grade = obs.metadata.get("grader_score", 0.0) or 0.0
+        pct = int(grade * 100)
+        verdict = "🏆 EXCELLENT" if grade >= 0.8 else ("✅ GOOD" if grade >= 0.6 else "⚠️ NEEDS WORK")
+        new_entry += f"\\n{'═' * 45}\\n  EPISODE COMPLETE\\n  Final Score: {pct}%  {verdict}\\n{'═' * 45}\\n"
+
+    return (
+        terminal_log + new_entry,
+        _format_metrics(obs.metrics),
+        _format_score(obs),
+        f"Step {obs.step_number} / {obs.max_steps}",
+        ""
+    )
+
+# ── Gradio UI Build ───────────────────────────────────────────────────────────
 
 THEME = gr.themes.Base(
     primary_hue="violet",
-    secondary_hue="slate",
-    neutral_hue="slate",
-    font=[gr.themes.GoogleFont("JetBrains Mono"), "monospace"],
+    secondary_hue="zinc",
+    neutral_hue="zinc",
 )
 
-
 def build_ui():
-    with gr.Blocks(title="SprintBoard — Sprint Planning RL Environment", theme=THEME, css=CSS) as demo:
-
-        # ── Header ──
+    with gr.Blocks(title="SprintBoard — Modern RL Environment", theme=THEME, css=CSS) as demo:
         gr.HTML("""
         <div id="header">
             <h1>⚡ SprintBoard</h1>
-            <p>Sprint Planning & Backlog Grooming · Training Environment for LLM Agents · OpenEnv Compliant</p>
+            <p>Professional Sprint Planning & Backlog Management · LLM Agent Training Grounds</p>
         </div>
         """)
 
-        # ── Per-session state ──
         env_state = gr.State(_make_env)
 
         with gr.Row():
-            # ── LEFT PANEL ────────────────────────────────
-            with gr.Column(scale=1, min_width=280):
-                gr.Markdown("### 🎯 Select Task")
+            with gr.Column(scale=1, min_width=320):
+                with gr.Column(elem_classes=["panel-glass"]):
+                    gr.Markdown("### 🎯 Session Control")
+                    task_selector = gr.Dropdown(choices=_task_choices(), value="task_1", label="Active Task", interactive=True)
+                    btn_start = gr.Button("▶  INITIALIZE ENVIRONMENT", variant="primary", elem_classes=["btn-primary"])
+                    
+                    gr.Markdown("### 📋 Current Context")
+                    alert_display = gr.Textbox(value="Initialize a task to begin.", label="Contextual Alert", lines=6, interactive=False)
+                    
+                    gr.Markdown("### 📊 Real-time Metrics")
+                    metrics_display = gr.HTML(value=_format_metrics(None))
 
-                task_selector = gr.Dropdown(
-                    choices=_task_choices(),
-                    value="task_1",
-                    label="Task",
-                    elem_id="task-select",
-                    interactive=True,
-                )
-
-                btn_start = gr.Button(
-                    "▶  Start Task",
-                    variant="primary",
-                    elem_id="btn-execute",
-                )
-
-                gr.Markdown("### 📋 Scenario")
-                alert_display = gr.Textbox(
-                    value="Select a task and click Start to begin.",
-                    label="Current Scenario",
-                    lines=7,
-                    interactive=False,
-                    show_label=True,
-                )
-
-                gr.Markdown("### 📊 Live Metrics")
-                metrics_display = gr.Textbox(
-                    value="No task started yet.",
-                    label="Board Health",
-                    lines=14,
-                    interactive=False,
-                    show_label=True,
-                )
-
-            # ── CENTER PANEL ───────────────────────────────
             with gr.Column(scale=3):
-                gr.Markdown("### 🖥️ Command Terminal")
-
-                step_display = gr.Textbox(
-                    value="Step 0 / 15",
-                    label="",
-                    interactive=False,
-                    max_lines=1,
-                    show_label=False,
-                    elem_id="step-counter",
-                )
-
-                terminal_log = gr.Textbox(
-                    value=(
-                        "Welcome to SprintBoard!\n\n"
-                        "→ Select a task from the left panel\n"
-                        "→ Click 'Start Task' to begin an episode\n"
-                        "→ Type planning commands below and press Execute\n\n"
-                        "Example commands:\n"
-                        "  LIST_BACKLOG\n"
-                        "  VIEW_TEAM\n"
-                        "  VIEW_VELOCITY\n"
-                        "  ASSIGN US-101 Alice\n"
-                        "  ESTIMATE US-103 5\n"
-                        "  FINALIZE_SPRINT\n"
-                    ),
-                    label="Terminal Output",
-                    lines=22,
-                    max_lines=22,
-                    interactive=False,
-                    elem_id="terminal-log",
-                    show_label=True,
-                    autoscroll=True,
-                )
-
-                gr.Markdown("### ⌨️ Enter Command")
-                with gr.Row():
-                    cmd_input = gr.Textbox(
-                        placeholder="e.g.  VIEW_TEAM  or  ASSIGN 101 Alice  or  HELP",
-                        label="",
-                        lines=1,
-                        max_lines=1,
-                        scale=4,
-                        interactive=True,
-                        elem_id="cmd-input",
-                        show_label=False,
-                    )
-                    btn_exec = gr.Button(
-                        "Execute ▶",
-                        scale=1,
-                        variant="primary",
-                        elem_id="btn-execute",
+                with gr.Column(elem_classes=["terminal-window"]):
+                    gr.HTML("""<div class="terminal-header"><div class="dot red"></div><div class="dot amber"></div><div class="dot green"></div></div>""")
+                    terminal_log = gr.Textbox(
+                        value="Welcome to SprintBoard Terminal.\\\\nWaiting for initialization...\\\\n",
+                        lines=22, max_lines=22, interactive=False, elem_id="terminal-log", show_label=False, autoscroll=True
                     )
 
-                # Quick command buttons (one-click investigation)
-                gr.Markdown("**⚡ Quick Investigation:**")
                 with gr.Row():
-                    q_btn_backlog = gr.Button("📋 Backlog", size="sm", variant="secondary")
-                    q_btn_team    = gr.Button("👥 Team", size="sm", variant="secondary")
-                    q_btn_vel     = gr.Button("📈 Velocity", size="sm", variant="secondary")
-                    q_btn_sprint  = gr.Button("🔍 Sprint", size="sm", variant="secondary")
-                    q_btn_bugs    = gr.Button("🐛 Bugs", size="sm", variant="secondary")
+                    step_display = gr.HTML(value="<div style='color:#71717a;font-size:12px;padding:8px;'>Step 0 / --</div>")
 
-                # AI Agent row
-                gr.Markdown("**🤖 AI Agent:**")
                 with gr.Row():
-                    btn_autosolve = gr.Button(
-                        "🤖  Auto-Solve with AI",
-                        variant="primary",
-                        size="lg",
-                        elem_id="btn-autosolve",
-                    )
+                    cmd_input = gr.Textbox(placeholder="Enter command...", scale=4, interactive=True, elem_id="cmd-input", show_label=False)
+                    btn_exec = gr.Button("EXECUTE", scale=1, variant="primary", elem_classes=["btn-primary"])
 
-                # Visual Manifest Tab
-                gr.Markdown("### 📜 Final Sprint Manifest")
-                sprint_manifest = gr.HTML(
-                    value=_format_sprint_manifest(_make_env().board, is_done=False),
-                    elem_id="sprint-manifest",
-                )
+                with gr.Row():
+                    with gr.Column(scale=2):
+                        gr.Markdown("**⚡ Quick Actions:**")
+                        with gr.Row():
+                            q_btn_backlog = gr.Button("📋 Backlog", size="sm", elem_classes=["btn-secondary"])
+                            q_btn_team    = gr.Button("👥 Team", size="sm", elem_classes=["btn-secondary"])
+                            q_btn_vel     = gr.Button("📈 Velocity", size="sm", elem_classes=["btn-secondary"])
+                            q_btn_sprint  = gr.Button("🔍 Sprint", size="sm", elem_classes=["btn-secondary"])
+                    with gr.Column(scale=1):
+                        gr.Markdown("**🤖 Automation:**")
+                        btn_autosolve = gr.Button("🤖  AUTO-SOLVE", variant="primary", elem_classes=["btn-primary"])
 
-            # ── RIGHT PANEL ────────────────────────────────
-            with gr.Column(scale=1, min_width=240):
-                gr.Markdown("### 🏆 Score")
-                score_display = gr.Textbox(
-                    value=_format_score_initial(),
-                    label="Grader",
-                    lines=18,
-                    interactive=False,
-                    elem_id="score-box",
-                    show_label=True,
-                    autoscroll=True,
-                )
+                gr.Markdown("### 📜 Live Sprint Manifest")
+                sprint_manifest = gr.HTML(value=_format_sprint_manifest(_make_env().board))
 
-                gr.Markdown("### 📖 Command Reference")
-                gr.Markdown("""
+            with gr.Column(scale=1, min_width=300):
+                gr.Markdown("### 🏆 Performance Tracker")
+                score_display = gr.HTML(value=_format_score_initial())
+                
+                with gr.Accordion("📖 Command Reference", open=False):
+                    gr.Markdown("""
 **Investigation:**
-```
-LIST_BACKLOG
-VIEW_STORY <id>
-CHECK_DEPS <id>
-VIEW_TEAM
-VIEW_VELOCITY
-VIEW_SPRINT
-VIEW_BUGS
-VIEW_EPIC <id>
-SEARCH_BACKLOG <kw>
-```
+- LIST_BACKLOG
+- VIEW_STORY <id>
+- VIEW_TEAM
+
 **Planning:**
-```
-ESTIMATE <id> <pts>
-ASSIGN <id> <name>
-UNASSIGN <id>
-ADD_TO_SPRINT <id>
-REMOVE_FROM_SPRINT <id>
-FLAG_RISK <id> <reason>
-SET_PRIORITY <id> P0|P1|P2
-FINALIZE_SPRINT
-```
+- ESTIMATE <id> <pts>
+- ASSIGN <id> <name>
+- FINALIZE_SPRINT
 """)
 
-                btn_reset = gr.Button(
-                    "↺  New Episode",
-                    variant="secondary",
-                    elem_id="btn-reset",
-                )
+                btn_reset = gr.Button("↺  RESET EPISODE", variant="secondary", elem_classes=["btn-secondary"])
 
-        # ── Footer ──
-        gr.HTML("""
-        <div style="text-align:center;padding:16px;color:#334155;font-size:0.75rem;border-top:1px solid #1e293b;margin-top:16px;">
-            SprintBoard · OpenEnv RL Environment · 15 Tasks · 3-Axis Deterministic Grading ·
-            <a href="https://github.com/meta-pytorch/OpenEnv" target="_blank" style="color:#7c3aed;">OpenEnv Spec</a>
-        </div>
-        """)
+        # ── Event Wiring ──────────────────────────────────────────────────────
 
-        # ── Event wiring ──────────────────────────────────────────────────────
-
-        # Start Button
         def on_start(task_id, env):
-            log, metrics, score, step, alert = start_task(task_id, env)
-            return log, metrics, score, step, alert, _format_sprint_manifest(env.board, is_done=False)
+            log, met, sco, stp, alrt = start_task(task_id, env)
+            return log, met, sco, stp, alrt, _format_sprint_manifest(env.board)
 
-        btn_start.click(
-            fn=on_start,
-            inputs=[task_selector, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, sprint_manifest],
-        )
+        btn_start.click(fn=on_start, inputs=[task_selector, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, sprint_manifest])
 
-        # Execute Action
-        def on_action_execute(command, log, env):
-            updated_log, metrics, score, step, _ = execute_command(command, log, env)
-            is_done = "EPISODE COMPLETE" in updated_log  # heuristic for execute_command results
-            return updated_log, metrics, score, step, _format_sprint_manifest(env.board, is_done=is_done)
-
-        btn_exec.click(
-            fn=on_action_execute,
-            inputs=[cmd_input, terminal_log, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest],
-        )
-        cmd_input.submit(
-            fn=on_action_execute,
-            inputs=[cmd_input, terminal_log, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest],
-        )
-
-        # Quick investigation buttons
-        def on_quick_cmd(cmd, log, env):
-            updated_log, metrics, score, step, _ = execute_command(cmd, log, env)
+        def on_action(cmd, log, env):
+            updated_log, met, sco, stp, _ = execute_command(cmd, log, env)
             is_done = "EPISODE COMPLETE" in updated_log
-            return updated_log, metrics, score, step, _format_sprint_manifest(env.board, is_done=is_done)
+            return updated_log, met, sco, stp, _format_sprint_manifest(env.board, is_done=is_done), ""
 
-        outputs_list = [terminal_log, metrics_display, score_display, step_display, sprint_manifest]
-        q_btn_backlog.click(fn=lambda l, e: on_quick_cmd("LIST_BACKLOG", l, e), inputs=[terminal_log, env_state], outputs=outputs_list)
-        q_btn_team.click(fn=lambda l, e: on_quick_cmd("VIEW_TEAM", l, e) , inputs=[terminal_log, env_state], outputs=outputs_list)
-        q_btn_vel.click(fn=lambda l, e: on_quick_cmd("VIEW_VELOCITY", l, e) , inputs=[terminal_log, env_state], outputs=outputs_list)
-        q_btn_sprint.click(fn=lambda l, e: on_quick_cmd("VIEW_SPRINT", l, e) , inputs=[terminal_log, env_state], outputs=outputs_list)
-        q_btn_bugs.click(fn=lambda l, e: on_quick_cmd("VIEW_BUGS", l, e) , inputs=[terminal_log, env_state], outputs=outputs_list)
+        btn_exec.click(fn=on_action, inputs=[cmd_input, terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
+        cmd_input.submit(fn=on_action, inputs=[cmd_input, terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
 
-        # Reset button
+        q_btn_backlog.click(fn=lambda l, e: on_action("LIST_BACKLOG", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
+        q_btn_team.click(fn=lambda l, e: on_action("VIEW_TEAM", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
+        q_btn_vel.click(fn=lambda l, e: on_action("VIEW_VELOCITY", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
+        q_btn_sprint.click(fn=lambda l, e: on_action("VIEW_SPRINT", l, e), inputs=[terminal_log, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, sprint_manifest, cmd_input])
+
         def on_reset(task_id):
-            fresh_env = _make_env()
-            log, metrics, score, step, alert = start_task(task_id, fresh_env)
-            return log, metrics, score, step, alert, fresh_env, _format_sprint_manifest(fresh_env.board, is_done=False)
+            env = _make_env()
+            log, met, sco, stp, alrt = start_task(task_id, env)
+            return log, met, sco, stp, alrt, env, _format_sprint_manifest(env.board)
 
-        btn_reset.click(
-            fn=on_reset,
-            inputs=[task_selector],
-            outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, env_state, sprint_manifest],
-        )
+        btn_reset.click(fn=on_reset, inputs=[task_selector], outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, env_state, sprint_manifest])
 
-        # Auto-Solve
         def on_autosolve(task_id, env):
             from sprint_planning_env.agent import run_agent
             fresh_env = _make_env()
-            for log, metrics, score, step, is_terminal in run_agent(fresh_env, task_id, _format_metrics, _format_score, _format_score_initial):
-                yield log, metrics, score, step, fresh_env, _format_sprint_manifest(fresh_env.board, is_done=is_terminal)
+            for log, met, sco, stp, is_terminal in run_agent(fresh_env, task_id, _format_metrics, _format_score, _format_score_initial):
+                yield log, met, sco, stp, fresh_env, _format_sprint_manifest(fresh_env.board, is_done=is_terminal)
 
-        btn_autosolve.click(
-            fn=on_autosolve,
-            inputs=[task_selector, env_state],
-            outputs=[terminal_log, metrics_display, score_display, step_display, env_state, sprint_manifest],
-        )
-
+        btn_autosolve.click(fn=on_autosolve, inputs=[task_selector, env_state], outputs=[terminal_log, metrics_display, score_display, step_display, env_state, sprint_manifest])
 
     return demo
 
-
-
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ── Entry Point ───────────────────────────────────────────────────────────────
 
 import uvicorn
 from sprint_planning_env.server.app import app as openenv_app
