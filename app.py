@@ -114,12 +114,15 @@ body, .gradio-container {
 }
 
 #terminal-log-wrapper {
-    height: 520px !important;
+    height: 600px !important;
+    max-height: 600px !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important; /* Contain horizontal within pre */
     padding: 0 !important;
     background: #000 !important;
     scrollbar-width: thin;
-    scrollbar-color: #27272a transparent;
+    scrollbar-color: #3f3f46 transparent;
+    border-radius: 0 0 12px 12px;
 }
 #terminal-log-wrapper pre {
     margin: 0;
@@ -128,9 +131,10 @@ body, .gradio-container {
     font-family: 'JetBrains Mono', monospace !important;
     font-size: 13px !important;
     line-height: 1.6;
-    white-space: pre !important;
-    overflow-x: auto;
+    white-space: pre !important; 
+    overflow-x: auto !important; /* Enable horizontal scrolling if table is too wide */
     background: transparent !important;
+    min-width: 100%;
 }
 
 #cmd-input textarea {
@@ -217,9 +221,10 @@ def _render_terminal(text: str) -> str:
             (function() {{
                 var el = document.getElementById("terminal-log-wrapper");
                 if (el) {{
-                    el.scrollTop = el.scrollHeight;
-                    // Double check after a frame for layout changes
-                    requestAnimationFrame(() => {{ el.scrollTop = el.scrollHeight; }});
+                    // Use a small delay to ensure DOM is ready
+                    setTimeout(function() {{
+                        el.scrollTop = el.scrollHeight;
+                    }}, 10);
                 }}
             }})();
         </script>
