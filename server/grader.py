@@ -981,16 +981,20 @@ def grade_episode(
 ) -> Tuple[float, dict]:
     """Run the deterministic grader for the given fault type.
 
-    Returns (score, breakdown) where score is [0.0, 1.0] and breakdown
-    is a dict of individual scoring components for debugging.
+    Returns (score, breakdown) where score is strictly within (0, 1)
+    exclusive, as required by the hackathon validator.
     """
     grader = GRADER_REGISTRY.get(fault_type)
     if grader is None:
         logger.error("No grader for fault_type=%s", fault_type)
-        return 0.0, {"error": f"No grader for {fault_type}"}
+        return 0.001, {"error": f"No grader for {fault_type}"}
 
     try:
-        return grader(board, task_params, action_history, error_history, steps_used)
+        score, breakdown = grader(board, task_params, action_history, error_history, steps_used)
+        # Clamp to strictly (0, 1) — validator rejects 0.0 and 1.0
+        score = max(0.001, min(0.999, score))
+        return score, breakdown
     except Exception as e:
         logger.error("Grader error for %s: %s", fault_type, e)
-        return 0.0, {"error": str(e)}
+        return 0.001, {"error": str(e)}
+
