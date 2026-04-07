@@ -711,11 +711,10 @@ FINALIZE_SPRINT
 
 if __name__ == "__main__":
     demo = build_ui()
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=7860,
-        share=False,
-        show_error=True,
-        theme=THEME,
-        css=CSS,
-    )
+    
+    import uvicorn
+    from sprint_planning_env.server.app import app as openenv_app
+    
+    app = gr.mount_gradio_app(openenv_app, demo, path="/")
+    
+    uvicorn.run(app, host="0.0.0.0", port=7860)

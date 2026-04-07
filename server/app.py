@@ -43,7 +43,7 @@ _env = SprintBoardEnvironment()
 _env_lock = threading.Lock()
 
 
-@app.get("/")
+@app.get("/info")
 async def root():
     """Return environment metadata and available endpoints."""
     return {
