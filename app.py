@@ -722,7 +722,7 @@ THEME = gr.themes.Base(
 
 
 def build_ui():
-    with gr.Blocks(title="SprintBoard — Sprint Planning RL Environment") as demo:
+    with gr.Blocks(title="SprintBoard — Sprint Planning RL Environment", theme=THEME, css=CSS) as demo:
 
         # ── Header ──
         gr.HTML("""
