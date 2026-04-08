@@ -373,11 +373,13 @@ class SprintBoardEnvironment(Environment[SprintAction, SprintObservation, Sprint
                 error_history=self._error_history,
                 steps_used=self._step_count,
             )
+            # Clamp to strictly (0, 1) — validator rejects 0.0 and 1.0
+            score = max(0.001, min(0.999, round(score, 4)))
             # Store for /grader endpoint
             SprintBoardEnvironment.last_grader_result = {
                 "task_id": self._task_id,
                 "episode_id": self._episode_id,
-                "score": round(score, 4),
+                "score": score,
                 "breakdown": breakdown,
                 "steps_used": self._step_count,
                 "is_resolved": self._is_resolved,
@@ -386,10 +388,10 @@ class SprintBoardEnvironment(Environment[SprintAction, SprintObservation, Sprint
                 "Graded episode %s: score=%.3f breakdown=%s",
                 self._episode_id, score, breakdown,
             )
-            return round(score, 4)
+            return score
         except Exception as e:
             logger.error("Grader error: %s", e)
-            return 0.0
+            return 0.001
 
     def _terminal_observation(self, message: str) -> SprintObservation:
         """Return an observation for a terminal/error state."""

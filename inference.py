@@ -198,11 +198,15 @@ async def run_episode(env: SprintBoardEnv, client: OpenAI, task_id: str):
             if res.done:
                 break
 
-        score = obs_data.get("metadata", {}).get("grader_score", 0.0) or 0.0
+        score = obs_data.get("metadata", {}).get("grader_score", 0.001) or 0.001
+        # Clamp to strictly (0, 1) — validator rejects 0.0 and 1.0
+        score = max(0.001, min(0.999, score))
         success = obs_data.get("metadata", {}).get("is_resolved", False)
     except Exception as e:
         print(f"[ERROR] {e}", flush=True)
     finally:
+        # Ensure score is never exactly 0.0 or 1.0
+        score = max(0.001, min(0.999, score))
         log_end(success, steps, score, rewards)
 
 async def async_main():
