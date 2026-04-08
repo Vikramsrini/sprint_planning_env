@@ -150,7 +150,7 @@ def _grade_unestimated_stories(board: ProjectBoard, params: dict, history: List[
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_developer_overload(board: ProjectBoard, params: dict, history: List[str],
@@ -205,7 +205,7 @@ def _grade_developer_overload(board: ProjectBoard, params: dict, history: List[s
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_missing_dependency(board: ProjectBoard, params: dict, history: List[str],
@@ -250,7 +250,7 @@ def _grade_missing_dependency(board: ProjectBoard, params: dict, history: List[s
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_scope_creep(board: ProjectBoard, params: dict, history: List[str],
@@ -301,7 +301,7 @@ def _grade_scope_creep(board: ProjectBoard, params: dict, history: List[str],
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_wrong_priority(board: ProjectBoard, params: dict, history: List[str],
@@ -350,7 +350,7 @@ def _grade_wrong_priority(board: ProjectBoard, params: dict, history: List[str],
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -405,7 +405,7 @@ def _grade_velocity_overload(board: ProjectBoard, params: dict, history: List[st
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_skill_mismatch(board: ProjectBoard, params: dict, history: List[str],
@@ -452,7 +452,7 @@ def _grade_skill_mismatch(board: ProjectBoard, params: dict, history: List[str],
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_epic_decomposition(board: ProjectBoard, params: dict, history: List[str],
@@ -509,7 +509,7 @@ def _grade_epic_decomposition(board: ProjectBoard, params: dict, history: List[s
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_priority_conflict(board: ProjectBoard, params: dict, history: List[str],
@@ -558,7 +558,7 @@ def _grade_priority_conflict(board: ProjectBoard, params: dict, history: List[st
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_tech_debt_balance(board: ProjectBoard, params: dict, history: List[str],
@@ -622,7 +622,7 @@ def _grade_tech_debt_balance(board: ProjectBoard, params: dict, history: List[st
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -681,7 +681,7 @@ def _grade_dependency_chain_overload(board: ProjectBoard, params: dict, history:
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_pto_velocity_drop(board: ProjectBoard, params: dict, history: List[str],
@@ -735,7 +735,7 @@ def _grade_pto_velocity_drop(board: ProjectBoard, params: dict, history: List[st
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_cross_team(board: ProjectBoard, params: dict, history: List[str],
@@ -791,7 +791,7 @@ def _grade_cross_team(board: ProjectBoard, params: dict, history: List[str],
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_sprint_rescue(board: ProjectBoard, params: dict, history: List[str],
@@ -876,7 +876,7 @@ def _grade_sprint_rescue(board: ProjectBoard, params: dict, history: List[str],
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 def _grade_full_sprint_planning(board: ProjectBoard, params: dict, history: List[str],
@@ -945,7 +945,7 @@ def _grade_full_sprint_planning(board: ProjectBoard, params: dict, history: List
         breakdown["proc_clean_execution"] = 0.10
         score += 0.10
 
-    return min(1.0, round(score, 4)), breakdown
+    return max(0.001, min(0.999, round(score, 4))), breakdown
 
 
 # ══════════════════════════════════════════════════════════════════

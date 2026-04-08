@@ -183,11 +183,10 @@ def run_agent(env, task_id: str, fmt_metrics, fmt_score, fmt_score_initial, max_
         
         if is_done:
             grade = obs.metadata.get("grader_score", 0.0) or 0.0
-            pct = int(grade * 100)
             entry += (
                 f"\n{'═'*40}\n"
                 f"  EPISODE COMPLETE\n"
-                f"  🏆 FINAL SCORE: {pct}%\n"
+                f"  🏆 FINAL SCORE: {grade:.3f}\n"
                 f"{'═'*40}\n"
             )
             accumulated_log += entry
