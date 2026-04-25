@@ -43,7 +43,8 @@ SYSTEM_PROMPT = """You are an expert Agile sprint planning agent.
 Output a SHORT NUMBERED PLAN of commands, ONE PER LINE, no markdown, no commentary.
 Investigate first (LIST_BACKLOG, VIEW_STORY, VIEW_TEAM, CHECK_DEPS, VIEW_VELOCITY, VIEW_SPRINT, VIEW_BUGS, VIEW_EPIC),
 then act (ESTIMATE, ASSIGN, UNASSIGN, ADD_TO_SPRINT, REMOVE_FROM_SPRINT, SET_PRIORITY, FLAG_RISK, DECOMPOSE),
-and finish with FINALIZE_SPRINT. Use at most 12 steps.
+and finish with FINALIZE_SPRINT.
+Use 4 to 8 steps. STOP IMMEDIATELY after FINALIZE_SPRINT and emit nothing else.
 
 Allowed command verbs:
 LIST_BACKLOG, VIEW_STORY, CHECK_DEPS, VIEW_TEAM, VIEW_VELOCITY, VIEW_SPRINT,
@@ -139,7 +140,7 @@ def reward_score_function(prompts, completions, **kwargs) -> List[float]:
 
     For each completion we execute its commands sequentially in a fresh env
     until the env terminates or we exhaust the plan, then return the final
-    grader score (clamped to [0,1]).
+    grader score plus per-step shaping rewards (clamped to [0,1]).
     """
     rewards: List[float] = []
     env = SprintBoardEnvironment()
@@ -152,37 +153,51 @@ def reward_score_function(prompts, completions, **kwargs) -> List[float]:
             continue
 
         env.reset(task_id=task_id)
-        last_reward = 0.0
+        shaped_total = 0.0
         grader_score = None
+        steps_taken = 0
         for command in commands:
             result = env.step(SprintAction(command=command))
+            steps_taken += 1
             if result.reward is not None:
-                last_reward = float(result.reward)
+                shaped_total += max(0.0, float(result.reward))
             if result.done:
                 if result.metadata and result.metadata.get("grader_score") is not None:
                     grader_score = float(result.metadata["grader_score"])
                 break
 
-        reward = grader_score if grader_score is not None else last_reward
+        if grader_score is not None:
+            reward = grader_score
+            if steps_taken <= 12:
+                reward += 0.05
+        else:
+            reward = min(0.5, shaped_total)
+
         rewards.append(max(0.0, min(1.0, reward)))
 
     return rewards
 
 
 def format_reward_function(prompts, completions, **kwargs) -> List[float]:
-    """Reward well-formed multi-step plans that end with FINALIZE_SPRINT."""
+    """Reward well-formed concise plans that terminate with FINALIZE_SPRINT."""
     rewards: List[float] = []
     for completion in completions:
+        text = _normalize_completion(completion)
         commands = _extract_command_sequence(completion)
         if not commands:
             rewards.append(0.0)
             continue
-        score = 0.05
-        if 2 <= len(commands) <= 12:
-            score += 0.05
+        score = 0.04
+        if 3 <= len(commands) <= 10:
+            score += 0.04
         if commands[-1].split()[0].upper() == "FINALIZE_SPRINT":
-            score += 0.05
-        rewards.append(min(0.15, score))
+            score += 0.06
+        if len(text) <= 600:
+            score += 0.04
+        unique_verbs = {cmd.split()[0].upper() for cmd in commands}
+        if len(unique_verbs) >= max(3, len(commands) // 2):
+            score += 0.02
+        rewards.append(min(0.20, score))
     return rewards
 
 
@@ -355,6 +370,13 @@ def train(args: argparse.Namespace) -> None:
         num_generations=args.num_generations,
         logging_steps=args.logging_steps,
         report_to=[],
+        # KL constraint to prevent policy drift seen in earlier runs
+        beta=args.kl_beta,
+        # Save best checkpoint by reward instead of last
+        save_strategy="epoch",
+        save_total_limit=3,
+        warmup_ratio=0.1,
+        lr_scheduler_type="cosine",
         # Unsloth optimizations
         bf16=is_bfloat16_supported() if args.use_unsloth else False,
         fp16=not is_bfloat16_supported() if args.use_unsloth else False,
@@ -384,7 +406,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--grad-accum", type=int, default=4)
     parser.add_argument("--num-generations", type=int, default=4)
-    parser.add_argument("--learning-rate", type=float, default=5e-6)
+    parser.add_argument("--learning-rate", type=float, default=3e-6)
     parser.add_argument("--max-samples", type=int, default=60)
     parser.add_argument("--max-prompt-length", type=int, default=512)
     parser.add_argument("--max-completion-length", type=int, default=256)
@@ -403,6 +425,8 @@ def parse_args() -> argparse.Namespace:
                         help="LoRA alpha for Unsloth (default: 32)")
     parser.add_argument("--lora-dropout", type=float, default=0.0,
                         help="LoRA dropout for Unsloth (default: 0.0 for best compatibility)")
+    parser.add_argument("--kl-beta", type=float, default=0.04,
+                        help="KL penalty coefficient for GRPO (default: 0.04)")
 
     return parser.parse_args()
 
