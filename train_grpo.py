@@ -211,6 +211,8 @@ def train(args: argparse.Namespace) -> None:
         gradient_accumulation_steps=args.grad_accum,
         num_train_epochs=args.epochs,
         num_generations=args.num_generations,
+        max_completion_length=args.max_completion_length,
+        max_prompt_length=args.max_prompt_length,
         logging_steps=args.logging_steps,
         report_to=[],
         dataloader_num_workers=0,  # Disable multiprocessing to fix dill pickling issues
