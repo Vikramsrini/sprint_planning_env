@@ -6,3 +6,11 @@ pydantic>=2.0
 openai
 huggingface_hub>=0.22.0
 mistralai>=1.0.0
+# LLM Auto-Solve (Qwen2.5 + PEFT LoRA) — large wheels; needed for / Gradio "Auto-Solve (Qwen+LoRA)".
+torch>=2.2.0
+transformers>=4.51.0
+peft>=0.14.0
+accelerate>=0.34.0
+safetensors>=0.4.0
+sentencepiece>=0.2.0
+protobuf>=4.25.0

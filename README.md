@@ -161,7 +161,7 @@ model in under an hour on free Colab.
 | 1 | Clones this Space, installs the env in-process. |
 | 2 | Loads `Qwen/Qwen2.5-1.5B-Instruct` + LoRA r=16. |
 | 3 | **Baseline pass** — 1 greedy rollout per task; records grader score. |
-| 4 | **Phase A · SFT warm-start** — short prompt-masked SFT on the 15 expert plans shipped in `agent.TASKS_COMMANDS`. Anchors the *output channel* (`one verb per line`, ending in `FINALIZE_SPRINT`). |
+| 4 | **Phase A · SFT warm-start** — masked SFT on the 15 expert plans in `agent.TASKS_COMMANDS` using the same `tokenizer.apply_chat_template` (system + user + assistant) as eval and GRPO, so the Instruct model is not train/test mismatched. |
 | 5 | **SFT eval pass** — same 15 tasks, greedy decode. |
 | 6 | **Phase B · GRPO refinement** — `trl.GRPOTrainer` with two reward callbacks: a *full multi-step trajectory* reward (final grader score after running the model's whole plan against the env) and a graded format reward (length + `FINALIZE_SPRINT` discipline). 4 generations per prompt, small LR (5e-7), `beta=0` so SFT is preserved. |
 | 7 | **Trained eval pass** — 1 rollout per task. |
@@ -171,7 +171,7 @@ model in under an hour on free Colab.
 collapses the output format before the reward signal can shape behaviour
 (early experiments produced `plan_len=0` plans). The SFT pass is essentially
 behaviour-cloning on a tiny expert dataset — it teaches the format channel
-in ~6 epochs of ~15 examples each, after which GRPO has a *useful gradient*
+in many passes over 15 examples (configurable; default 15 epochs in the notebook), after which GRPO has a *useful gradient*
 to push on. Both phases are run from the same notebook, so the training
 artefact judges can re-run is one click.
 
@@ -213,11 +213,26 @@ python -m scripts.baseline_eval
 ```
 Outputs `assets/baseline_scores.csv` and the bar plot above.
 
+### Hugging Face Space — LLM Auto-Solve
+
+The Gradio **Auto-Solve** button runs **greedy generation** with `Qwen/Qwen2.5-1.5B-Instruct` +
+a PEFT adapter (same chat template as the training notebook). Configure the Space with:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `SPRINTBOARD_ADAPTER_ID` | `vikramsrini/sprintboard-qwen25-1.5b-lora` | Hub repo with LoRA weights |
+| `SPRINTBOARD_BASE_MODEL` | `Qwen/Qwen2.5-1.5B-Instruct` | Base causal LM before LoRA |
+| `SPRINTBOARD_AUTOSOLVE` | `llm` | Set to `heuristic` to use the hard-coded expert bot only (no torch) |
+| `SPRINTBOARD_MAX_PROMPT_TOKENS` | `1024` | Tokenizer truncation for the chat prompt |
+
+If the adapter cannot be loaded (OOM, missing deps), Auto-Solve **falls back** to the heuristic bot and prints a warning in the terminal.
+
 ## 9 · Repository layout
 
 ```
 .
 ├── app.py                       # Gradio playground (HF Spaces entry-point)
+├── llm_autosolve.py             # Qwen+LoRA greedy plan for Auto-Solve
 ├── openenv.yaml                 # OpenEnv manifest
 ├── client.py                    # EnvClient subclass (typed step/reset)
 ├── inference.py                 # Reference LLM agent for the validator

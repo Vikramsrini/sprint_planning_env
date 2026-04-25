@@ -730,7 +730,7 @@ def build_ui():
         gr.HTML("""
         <div id="header-bar">
             <h1>⚡ SprintBoard</h1>
-            <p>Sprint Planning & Backlog Management · LLM Agent Training Grounds</p>
+            <p>Sprint Planning & Backlog Management · Auto-Solve runs <strong>Qwen2.5 + your LoRA</strong> (see <code>SPRINTBOARD_ADAPTER_ID</code>)</p>
         </div>
         """)
 
@@ -818,7 +818,7 @@ def build_ui():
                         elem_id="btn-execute",
                     )
                     btn_autosolve = gr.Button(
-                        "🤖 AUTO-SOLVE",
+                        "🤖 Auto-Solve (Qwen+LoRA)",
                         scale=1,
                         variant="primary",
                         elem_id="btn-autosolve",
@@ -960,12 +960,21 @@ def build_ui():
             outputs=[terminal_log, metrics_display, score_display, step_display, alert_display, env_state, sprint_manifest],
         )
 
-        # Auto-Solve
+        # Auto-Solve — Qwen2.5 + LoRA (`llm_autosolve`) or heuristic fallback
         def on_autosolve(task_id, env):
-            from sprint_planning_env.agent import run_agent
+            from sprint_planning_env.llm_autosolve import run_llm_agent
+
             fresh_env = _make_env()
-            for log, metrics, score, step, is_terminal in run_agent(fresh_env, task_id, _format_metrics, _format_score, _format_score_initial):
-                yield log, metrics, score, step, fresh_env, _format_sprint_manifest(fresh_env.board, is_done=is_terminal)
+            for log, metrics, score, step, is_terminal in run_llm_agent(
+                fresh_env,
+                task_id,
+                _format_metrics,
+                _format_score,
+                _format_score_initial,
+            ):
+                yield log, metrics, score, step, fresh_env, _format_sprint_manifest(
+                    fresh_env.board, is_done=is_terminal
+                )
 
         btn_autosolve.click(
             fn=on_autosolve,
