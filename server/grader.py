@@ -21,8 +21,12 @@ not whether the agent typed the right keywords. This prevents reward hacking.
 import logging
 from typing import List, Tuple, Dict, Any, Optional
 
-from sprint_planning_env.server.board import ProjectBoard
-from sprint_planning_env.server.tasks import STORY_POOL, TEAM_MEMBERS, BUG_BACKLOG, EPIC_POOL
+try:
+    from sprint_planning_env.server.board import ProjectBoard
+    from sprint_planning_env.server.tasks import STORY_POOL, TEAM_MEMBERS, BUG_BACKLOG, EPIC_POOL
+except ModuleNotFoundError:
+    from server.board import ProjectBoard
+    from server.tasks import STORY_POOL, TEAM_MEMBERS, BUG_BACKLOG, EPIC_POOL
 
 logger = logging.getLogger(__name__)
 
