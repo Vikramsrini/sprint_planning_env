@@ -18,7 +18,6 @@ import sys
 import os
 import json
 import threading
-import subprocess
 import time
 from huggingface_hub import HfApi, SpaceHardware
 
@@ -440,7 +439,6 @@ class TrainingManager:
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._proc = None
         self._log_lines = []
         self._status = "idle"
         self._mode = "none"
@@ -473,47 +471,6 @@ class TrainingManager:
         body = "\n".join(self._log_lines[-40:]) if self._log_lines else "No training logs yet."
         return f"{self._status_header()}\n{body}"
 
-    def _reader_loop(self) -> None:
-        """Collect stdout from local training process."""
-        if not self._proc or not self._proc.stdout:
-            return
-        for line in self._proc.stdout:
-            self._append(line.rstrip())
-
-    def _start_local(
-        self,
-        model_id: str,
-        epochs: int,
-        max_samples: int,
-        output_dir: str,
-    ) -> str:
-        cmd = [
-            sys.executable,
-            "train_grpo.py",
-            "--model-id",
-            model_id,
-            "--output-dir",
-            output_dir,
-            "--epochs",
-            str(epochs),
-            "--max-samples",
-            str(max_samples),
-        ]
-        self._proc = subprocess.Popen(
-            cmd,
-            cwd=os.path.dirname(__file__),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
-        self._mode = "local_subprocess"
-        self._status = "running"
-        self._started_at = time.time()
-        self._append(f"Started local training: {' '.join(cmd)}")
-        threading.Thread(target=self._reader_loop, daemon=True).start()
-        return self.render()
-
     def _start_hf_job(
         self,
         model_id: str,
@@ -527,10 +484,15 @@ class TrainingManager:
             return False, "HF_TOKEN is missing; cannot submit HF Job."
 
         api = HfApi(token=token)
+        repo_id = os.getenv("HF_JOB_REPO_ID", "vikramsrini/sprint_planning_env").strip()
         command = [
             "bash",
             "-lc",
             (
+                "set -euo pipefail && "
+                f"git clone https://huggingface.co/spaces/{repo_id} sprint_planning_env && "
+                "cd sprint_planning_env && "
+                "python -m pip install --upgrade pip && "
                 "python -m pip install -e . && "
                 "python -m pip install -r requirements-train.txt && "
                 f"python train_grpo.py --model-id {model_id} --output-dir {output_dir} "
@@ -564,43 +526,29 @@ class TrainingManager:
         epochs: int,
         max_samples: int,
         output_dir: str,
-        use_hf_jobs: bool,
         hardware: str,
     ) -> str:
         with self._lock:
             if self._status in {"running", "submitted"}:
                 return self.render()
             self._log_lines = []
-            self._proc = None
             self._job_id = None
             self._job_url = None
             self._status = "starting"
             self._mode = "none"
             self._started_at = time.time()
 
-            if use_hf_jobs:
-                ok, msg = self._start_hf_job(model_id, epochs, max_samples, output_dir, hardware)
-                if ok:
-                    return msg
-                self._append(msg)
-                self._status = "failed(hf_job_submit)"
-                self._mode = "hf_jobs"
-                self._append("HF job submission failed. Local fallback disabled to avoid using non-HF compute.")
-                return self.render()
-            return self._start_local(model_id, epochs, max_samples, output_dir)
+            ok, msg = self._start_hf_job(model_id, epochs, max_samples, output_dir, hardware)
+            if ok:
+                return msg
+            self._append(msg)
+            self._status = "failed(hf_job_submit)"
+            self._mode = "hf_jobs"
+            self._append("HF job submission failed. Local training is disabled.")
+            return self.render()
 
     def refresh(self) -> str:
         with self._lock:
-            # Local process state.
-            if self._proc is not None:
-                rc = self._proc.poll()
-                if rc is None:
-                    self._status = "running"
-                elif rc == 0:
-                    self._status = "completed"
-                else:
-                    self._status = f"failed({rc})"
-
             # HF job state.
             if self._job_id:
                 token = os.getenv("HF_TOKEN", "").strip()
@@ -617,11 +565,7 @@ class TrainingManager:
 
     def stop(self) -> str:
         with self._lock:
-            if self._proc is not None and self._proc.poll() is None:
-                self._proc.terminate()
-                self._status = "stopped"
-                self._append("Stopped local training process.")
-            elif self._job_id:
+            if self._job_id:
                 self._append("HF job stop is not wired in this app yet; stop from HF UI.")
             else:
                 self._append("No active training run.")
@@ -1072,7 +1016,7 @@ def build_ui():
                     autoscroll=True,
                 )
 
-                gr.HTML("<div class='section-header' style='margin-top:16px;'>🧪 Training (HF-first)</div>")
+                gr.HTML("<div class='section-header' style='margin-top:16px;'>🧪 Training (HF Jobs only)</div>")
                 train_model_id = gr.Textbox(
                     value="Qwen/Qwen2.5-0.5B-Instruct",
                     label="Model ID",
@@ -1086,13 +1030,11 @@ def build_ui():
                     label="Output Dir",
                     lines=1,
                 )
-                with gr.Row():
-                    use_hf_jobs = gr.Checkbox(value=True, label="Use HF Jobs (fallback local)")
-                    train_hardware = gr.Dropdown(
-                        choices=["cpu-basic", "t4-small", "a10g-small", "a100-large"],
-                        value="t4-small",
-                        label="HF Hardware",
-                    )
+                train_hardware = gr.Dropdown(
+                    choices=["cpu-basic", "t4-small", "a10g-small", "a100-large"],
+                    value="t4-small",
+                    label="HF Hardware",
+                )
                 with gr.Row():
                     btn_train_start = gr.Button("▶ Start Training", variant="primary")
                     btn_train_refresh = gr.Button("↻ Refresh", variant="secondary")
@@ -1208,19 +1150,18 @@ def build_ui():
         )
 
         # Training controls
-        def on_train_start(model_id, epochs, samples, output_dir, use_jobs, hardware):
+        def on_train_start(model_id, epochs, samples, output_dir, hardware):
             return TRAINING_MANAGER.start(
                 model_id=model_id.strip(),
                 epochs=int(epochs),
                 max_samples=int(samples),
                 output_dir=output_dir.strip(),
-                use_hf_jobs=bool(use_jobs),
                 hardware=str(hardware),
             )
 
         btn_train_start.click(
             fn=on_train_start,
-            inputs=[train_model_id, train_epochs, train_samples, train_output_dir, use_hf_jobs, train_hardware],
+            inputs=[train_model_id, train_epochs, train_samples, train_output_dir, train_hardware],
             outputs=[train_status],
         )
         btn_train_refresh.click(fn=lambda: TRAINING_MANAGER.refresh(), inputs=[], outputs=[train_status])
