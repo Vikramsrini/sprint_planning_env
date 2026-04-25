@@ -6,7 +6,15 @@ import sys
 from pathlib import Path
 from typing import Any, List
 
+import torch
+
 sys.path.insert(0, os.path.dirname(__file__))
+
+# Unsloth should be imported before trl/transformers for full patching.
+try:
+    import unsloth  # noqa: F401
+except ImportError:
+    pass
 
 from datasets import Dataset
 from transformers import AutoTokenizer
@@ -216,12 +224,15 @@ def load_unsloth_model(model_id: str, args: argparse.Namespace):
     print(f"  - LoRA rank: {args.lora_rank}")
     print(f"  - Max sequence length: {args.max_prompt_length}")
 
+    use_bf16 = is_bfloat16_supported()
+    torch_dtype = torch.bfloat16 if use_bf16 else torch.float16
+
     # Load base model with Unsloth
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=model_id,
         max_seq_length=args.max_prompt_length,
         load_in_4bit=args.load_in_4bit,
-        dtype=None,  # Auto-detect (float16 or bfloat16)
+        dtype=torch_dtype,
     )
 
     # Apply LoRA adapters
@@ -230,12 +241,19 @@ def load_unsloth_model(model_id: str, args: argparse.Namespace):
         r=args.lora_rank,
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                       "gate_proj", "up_proj", "down_proj"],
+        # "all-linear" is more robust across architecture naming differences.
+        target_modules=["all-linear"],
         use_gradient_checkpointing="unsloth",
         random_state=3407,
         use_rslora=False,  # Use standard LoRA
     )
+
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    if trainable_params == 0:
+        raise RuntimeError(
+            "Unsloth LoRA adapters were not attached (0 trainable parameters). "
+            "Try lowering rank or disabling 4-bit quantization."
+        )
 
     # Set pad token
     tokenizer.pad_token = tokenizer.eos_token
@@ -311,8 +329,8 @@ def parse_args() -> argparse.Namespace:
                         help="LoRA rank for Unsloth (default: 16)")
     parser.add_argument("--lora-alpha", type=int, default=32,
                         help="LoRA alpha for Unsloth (default: 32)")
-    parser.add_argument("--lora-dropout", type=float, default=0.05,
-                        help="LoRA dropout for Unsloth (default: 0.05)")
+    parser.add_argument("--lora-dropout", type=float, default=0.0,
+                        help="LoRA dropout for Unsloth (default: 0.0 for best compatibility)")
 
     return parser.parse_args()
 
