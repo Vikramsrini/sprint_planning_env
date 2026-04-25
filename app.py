@@ -927,7 +927,7 @@ THEME = gr.themes.Base(
 
 
 def build_ui():
-    with gr.Blocks(title="SprintBoard — Sprint Planning RL Environment", theme=THEME, css=CSS) as demo:
+    with gr.Blocks(title="SprintBoard — Sprint Planning RL Environment") as demo:
 
         # ── Font loader + CSS fallback ──
         gr.HTML("""
@@ -1245,7 +1245,7 @@ from sprint_planning_env.server.app import app
 
 # Build and mount Gradio UI onto the same FastAPI server
 demo = build_ui()
-app = gr.mount_gradio_app(app, demo, path="/")
+app = gr.mount_gradio_app(app, demo, path="/", theme=THEME, css=CSS)
 
 if __name__ == "__main__":
     import uvicorn
