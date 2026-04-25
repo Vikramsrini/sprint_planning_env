@@ -494,11 +494,9 @@ class TrainingManager:
             "-lc",
             (
                 "set -euo pipefail && "
-                f"git clone https://huggingface.co/spaces/{repo_id} sprint_planning_env && "
+                f"git clone --depth 1 https://huggingface.co/spaces/{repo_id} sprint_planning_env && "
                 "cd sprint_planning_env && "
-                "python -m pip install --upgrade pip && "
-                "python -m pip install -e . && "
-                "python -m pip install -r requirements-train.txt && "
+                "python -m pip install -r requirements-train.txt pydantic && "
                 f"python train_grpo.py --model-id {model_id} --output-dir {output_dir} "
                 f"--epochs {epochs} --max-samples {max_samples} "
                 "--max-completion-length 96 --num-generations 4 --learning-rate 3e-6"
