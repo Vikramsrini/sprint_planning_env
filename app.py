@@ -445,6 +445,7 @@ class TrainingManager:
         self._job_id = None
         self._job_url = None
         self._started_at = None
+        self._last_job_payload = None
 
     def _append(self, line: str) -> None:
         self._log_lines.append(line)
@@ -469,7 +470,10 @@ class TrainingManager:
 
     def render(self) -> str:
         body = "\n".join(self._log_lines[-40:]) if self._log_lines else "No training logs yet."
-        return f"{self._status_header()}\n{body}"
+        payload = ""
+        if self._last_job_payload is not None:
+            payload = "\n" + json.dumps(self._last_job_payload, indent=2, default=str)
+        return f"{self._status_header()}\n{body}{payload}"
 
     def _start_hf_job(
         self,
@@ -496,7 +500,8 @@ class TrainingManager:
                 "python -m pip install -e . && "
                 "python -m pip install -r requirements-train.txt && "
                 f"python train_grpo.py --model-id {model_id} --output-dir {output_dir} "
-                f"--epochs {epochs} --max-samples {max_samples}"
+                f"--epochs {epochs} --max-samples {max_samples} "
+                "--max-completion-length 96 --num-generations 8 --learning-rate 3e-6"
             ),
         ]
 
@@ -516,8 +521,8 @@ class TrainingManager:
         self._mode = "hf_jobs"
         self._status = str(getattr(job, "status", "submitted"))
         self._started_at = time.time()
+        self._last_job_payload = job.__dict__
         self._append("Submitted HF Job successfully.")
-        self._append(json.dumps(job.__dict__, indent=2, default=str))
         return True, self.render()
 
     def start(
@@ -537,6 +542,7 @@ class TrainingManager:
             self._status = "starting"
             self._mode = "none"
             self._started_at = time.time()
+            self._last_job_payload = None
 
             ok, msg = self._start_hf_job(model_id, epochs, max_samples, output_dir, hardware)
             if ok:
@@ -559,6 +565,7 @@ class TrainingManager:
                         new_status = getattr(data, "status", None)
                         if new_status:
                             self._status = str(new_status)
+                        self._last_job_payload = data.__dict__
                     except Exception as exc:  # pragma: no cover - network/runtime dependent
                         self._append(f"HF status refresh warning: {exc}")
             return self.render()
@@ -1018,13 +1025,13 @@ def build_ui():
 
                 gr.HTML("<div class='section-header' style='margin-top:16px;'>🧪 Training (HF Jobs only)</div>")
                 train_model_id = gr.Textbox(
-                    value="Qwen/Qwen2.5-0.5B-Instruct",
+                    value="Qwen/Qwen2.5-1.5B-Instruct",
                     label="Model ID",
                     lines=1,
                 )
                 with gr.Row():
-                    train_epochs = gr.Number(value=1, precision=0, label="Epochs")
-                    train_samples = gr.Number(value=15, precision=0, label="Max Samples")
+                    train_epochs = gr.Number(value=3, precision=0, label="Epochs")
+                    train_samples = gr.Number(value=60, precision=0, label="Max Samples")
                 train_output_dir = gr.Textbox(
                     value="runs/sprintboard-grpo",
                     label="Output Dir",
