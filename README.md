@@ -34,27 +34,6 @@ OpenEnv Hackathon · India 2026 · Theme **#3.1 World Modeling — Professional 
 
 ---
 
-## 0 · Judge Criteria Checklist (quick map)
-
-Use this section as a one-screen checklist against common OpenEnv submission criteria.
-
-| Criterion | Status | Evidence |
-|---|---|---|
-| **OpenEnv protocol compliance** (`reset`, `step`, `state`, `/ws`) | ✅ | `server/environment.py`, `server/app.py`, `openenv.yaml` (deps set to `openenv-core>=0.2.0`, no upper pin) |
-| **Non-trivial real-world task (Theme #3.1)** | ✅ | 15 sprint-planning scenarios in `server/tasks.py` with easy→hard curriculum |
-| **Reward is rich and hard to game** | ✅ | `server/reward.py` + deterministic board-state grader in `server/grader.py` |
-| **Deterministic, reproducible evaluation** | ✅ | No LLM judge; deterministic graders + committed baseline/training artefacts |
-| **Training path provided** | ✅ | `colab_train_sprintboard_grpo.ipynb` (SFT warm-start + GRPO) |
-| **Before/after evidence committed** | ✅ | `assets/baseline_vs_heuristic.png`, `assets/before_after_per_task.png`, `assets/grpo_reward_curve.png`, `assets/training_summary.json` |
-| **Runnable live demo** | ✅ | Space app + Auto-Solve (`app.py`, `llm_autosolve.py`) |
-| **Write-up / mini-blog** | ✅ | `mini-blog.md` and Space discussion: <https://huggingface.co/spaces/vikramsrini/sprint_planning_env/discussions/1> |
-| **Validator-proxy inference path** | ✅ | `inference.py` uses `API_BASE_URL`, `API_KEY`, and `[START]/[STEP]/[END]` logs |
-| **Short demo video link in README** | ⏳ Optional/pending | Add YouTube link in section 10 when published |
-
-If judges ask “where is X?”, point them to this table first, then the linked files.
-
----
-
 ## 1 · The problem we're targeting
 
 Sprint planning is a **partially-observable, multi-step decision problem** that
