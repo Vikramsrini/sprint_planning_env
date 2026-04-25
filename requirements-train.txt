@@ -1,0 +1,8 @@
+trl
+transformers
+torch
+datasets
+unsloth
+accelerate
+bitsandbytes
+matplotlib
