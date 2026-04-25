@@ -16,6 +16,10 @@ The environment runs in-process (no HTTP server) for simplicity.
 
 import sys
 import os
+import json
+import threading
+import time
+from huggingface_hub import HfApi, SpaceHardware
 
 # Make sure the sprint_planning_env package is importable
 sys.path.insert(0, os.path.dirname(__file__))
@@ -429,6 +433,152 @@ def _task_choices():
         choices.append((label, tid))
     return choices
 
+
+class TrainingManager:
+    """Manage non-blocking training runs from the app UI."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._log_lines = []
+        self._status = "idle"
+        self._mode = "none"
+        self._job_id = None
+        self._job_url = None
+        self._started_at = None
+        self._last_job_payload = None
+
+    def _append(self, line: str) -> None:
+        self._log_lines.append(line)
+        # Keep memory bounded.
+        if len(self._log_lines) > 400:
+            self._log_lines = self._log_lines[-400:]
+
+    def _status_header(self) -> str:
+        started = (
+            time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._started_at))
+            if self._started_at
+            else "n/a"
+        )
+        return (
+            f"STATUS: {self._status}\n"
+            f"MODE: {self._mode}\n"
+            f"STARTED: {started}\n"
+            f"JOB ID: {self._job_id or '-'}\n"
+            f"JOB URL: {self._job_url or '-'}\n"
+            f"{'-'*52}"
+        )
+
+    def render(self) -> str:
+        body = "\n".join(self._log_lines[-40:]) if self._log_lines else "No training logs yet."
+        payload = ""
+        if self._last_job_payload is not None:
+            payload = "\n" + json.dumps(self._last_job_payload, indent=2, default=str)
+        return f"{self._status_header()}\n{body}{payload}"
+
+    def _start_hf_job(
+        self,
+        model_id: str,
+        epochs: int,
+        max_samples: int,
+        output_dir: str,
+        hardware: str,
+    ) -> tuple[bool, str]:
+        token = os.getenv("HF_TOKEN", "").strip()
+        if not token:
+            return False, "HF_TOKEN is missing; cannot submit HF Job."
+
+        api = HfApi(token=token)
+        repo_id = os.getenv("HF_JOB_REPO_ID", "vikramsrini/sprint_planning_env").strip()
+        command = [
+            "bash",
+            "-lc",
+            (
+                "set -euo pipefail && "
+                f"git clone --depth 1 https://huggingface.co/spaces/{repo_id} sprint_planning_env && "
+                "cd sprint_planning_env && "
+                "python -m pip install -r requirements-train.txt pydantic && "
+                f"python train_grpo.py --model-id {model_id} --output-dir {output_dir} "
+                f"--epochs {epochs} --max-samples {max_samples} "
+                "--max-completion-length 96 --num-generations 4 --learning-rate 3e-6"
+            ),
+        ]
+
+        try:
+            # Use official Hub Jobs API instead of raw HTTP endpoint.
+            job = api.run_job(
+                image="python:3.11",
+                command=command,
+                flavor=SpaceHardware(hardware),
+                env={"HF_HUB_ENABLE_HF_TRANSFER": "1"},
+            )
+        except Exception as exc:  # pragma: no cover - defensive path
+            return False, f"HF Job create failed: {exc}"
+
+        self._job_id = str(getattr(job, "id", "") or "")
+        self._job_url = getattr(job, "url", None) or (f"https://huggingface.co/jobs/{self._job_id}" if self._job_id else None)
+        self._mode = "hf_jobs"
+        self._status = str(getattr(job, "status", "submitted"))
+        self._started_at = time.time()
+        self._last_job_payload = job.__dict__
+        self._append("Submitted HF Job successfully.")
+        return True, self.render()
+
+    def start(
+        self,
+        model_id: str,
+        epochs: int,
+        max_samples: int,
+        output_dir: str,
+        hardware: str,
+    ) -> str:
+        with self._lock:
+            if self._status in {"running", "submitted"}:
+                return self.render()
+            self._log_lines = []
+            self._job_id = None
+            self._job_url = None
+            self._status = "starting"
+            self._mode = "none"
+            self._started_at = time.time()
+            self._last_job_payload = None
+
+            ok, msg = self._start_hf_job(model_id, epochs, max_samples, output_dir, hardware)
+            if ok:
+                return msg
+            self._append(msg)
+            self._status = "failed(hf_job_submit)"
+            self._mode = "hf_jobs"
+            self._append("HF job submission failed. Local training is disabled.")
+            return self.render()
+
+    def refresh(self) -> str:
+        with self._lock:
+            # HF job state.
+            if self._job_id:
+                token = os.getenv("HF_TOKEN", "").strip()
+                if token:
+                    try:
+                        api = HfApi(token=token)
+                        data = api.inspect_job(job_id=self._job_id)
+                        new_status = getattr(data, "status", None)
+                        if new_status:
+                            self._status = str(new_status)
+                        self._last_job_payload = data.__dict__
+                    except Exception as exc:  # pragma: no cover - network/runtime dependent
+                        self._append(f"HF status refresh warning: {exc}")
+            return self.render()
+
+    def stop(self) -> str:
+        with self._lock:
+            if self._job_id:
+                self._append("HF job stop is not wired in this app yet; stop from HF UI.")
+            else:
+                self._append("No active training run.")
+            return self.render()
+
+
+TRAINING_MANAGER = TrainingManager()
+
 # ── Core logic ────────────────────────────────────────────────────────────────
 
 def start_task(task_id: str, env: SprintBoardEnvironment):
@@ -719,7 +869,7 @@ THEME = gr.themes.Base(
 
 
 def build_ui():
-    with gr.Blocks(title="SprintBoard — Sprint Planning RL Environment", theme=THEME, css=CSS) as demo:
+    with gr.Blocks(title="SprintBoard — Sprint Planning RL Environment") as demo:
 
         # ── Font loader + CSS fallback ──
         gr.HTML("""
@@ -871,6 +1021,37 @@ def build_ui():
                     autoscroll=True,
                 )
 
+                gr.HTML("<div class='section-header' style='margin-top:16px;'>🧪 Training (HF Jobs only)</div>")
+                train_model_id = gr.Textbox(
+                    value="Qwen/Qwen2.5-1.5B-Instruct",
+                    label="Model ID",
+                    lines=1,
+                )
+                with gr.Row():
+                    train_epochs = gr.Number(value=3, precision=0, label="Epochs")
+                    train_samples = gr.Number(value=60, precision=0, label="Max Samples")
+                train_output_dir = gr.Textbox(
+                    value="runs/sprintboard-grpo",
+                    label="Output Dir",
+                    lines=1,
+                )
+                train_hardware = gr.Dropdown(
+                    choices=["cpu-basic", "t4-small", "a10g-small", "a100-large"],
+                    value="t4-small",
+                    label="HF Hardware",
+                )
+                with gr.Row():
+                    btn_train_start = gr.Button("▶ Start Training", variant="primary")
+                    btn_train_refresh = gr.Button("↻ Refresh", variant="secondary")
+                    btn_train_stop = gr.Button("■ Stop", variant="secondary")
+                train_status = gr.Textbox(
+                    value=TRAINING_MANAGER.render(),
+                    label="Training Status",
+                    lines=10,
+                    interactive=False,
+                    autoscroll=True,
+                )
+
                 # Command Reference
                 gr.HTML("""
                 <div class='section-header' style='margin-top:16px;'>📖 Command Reference</div>
@@ -982,6 +1163,24 @@ def build_ui():
             outputs=[terminal_log, metrics_display, score_display, step_display, env_state, sprint_manifest],
         )
 
+        # Training controls
+        def on_train_start(model_id, epochs, samples, output_dir, hardware):
+            return TRAINING_MANAGER.start(
+                model_id=model_id.strip(),
+                epochs=int(epochs),
+                max_samples=int(samples),
+                output_dir=output_dir.strip(),
+                hardware=str(hardware),
+            )
+
+        btn_train_start.click(
+            fn=on_train_start,
+            inputs=[train_model_id, train_epochs, train_samples, train_output_dir, train_hardware],
+            outputs=[train_status],
+        )
+        btn_train_refresh.click(fn=lambda: TRAINING_MANAGER.refresh(), inputs=[], outputs=[train_status])
+        btn_train_stop.click(fn=lambda: TRAINING_MANAGER.stop(), inputs=[], outputs=[train_status])
+
 
     return demo
 
@@ -994,7 +1193,7 @@ from sprint_planning_env.server.app import app
 
 # Build and mount Gradio UI onto the same FastAPI server
 demo = build_ui()
-app = gr.mount_gradio_app(app, demo, path="/")
+app = gr.mount_gradio_app(app, demo, path="/", theme=THEME, css=CSS)
 
 if __name__ == "__main__":
     import uvicorn

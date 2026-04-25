@@ -21,12 +21,20 @@ from typing import Optional, Any
 
 from openenv.core.env_server.interfaces import Environment
 
-from sprint_planning_env.models import SprintAction, SprintObservation, SprintState
-from sprint_planning_env.server.board import ProjectBoard
-from sprint_planning_env.server.tasks import TASK_REGISTRY, get_task, list_task_ids
-from sprint_planning_env.server.command_parser import parse_and_execute, is_destructive
-from sprint_planning_env.server.reward import compute_step_reward
-from sprint_planning_env.server.grader import grade_episode
+try:
+    from sprint_planning_env.models import SprintAction, SprintObservation, SprintState
+    from sprint_planning_env.server.board import ProjectBoard
+    from sprint_planning_env.server.tasks import TASK_REGISTRY, get_task, list_task_ids
+    from sprint_planning_env.server.command_parser import parse_and_execute, is_destructive
+    from sprint_planning_env.server.reward import compute_step_reward
+    from sprint_planning_env.server.grader import grade_episode
+except ModuleNotFoundError:
+    from models import SprintAction, SprintObservation, SprintState
+    from server.board import ProjectBoard
+    from server.tasks import TASK_REGISTRY, get_task, list_task_ids
+    from server.command_parser import parse_and_execute, is_destructive
+    from server.reward import compute_step_reward
+    from server.grader import grade_episode
 
 logger = logging.getLogger(__name__)
 

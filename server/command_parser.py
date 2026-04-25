@@ -14,7 +14,10 @@ import logging
 import shlex
 from typing import Tuple, Optional
 
-from sprint_planning_env.server.board import ProjectBoard
+try:
+    from sprint_planning_env.server.board import ProjectBoard
+except ModuleNotFoundError:
+    from server.board import ProjectBoard
 
 logger = logging.getLogger(__name__)
 

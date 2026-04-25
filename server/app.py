@@ -23,9 +23,14 @@ from fastapi.responses import JSONResponse
 
 from openenv.core.env_server.http_server import create_app
 
-from sprint_planning_env.models import SprintAction, SprintObservation
-from sprint_planning_env.server.environment import SprintBoardEnvironment
-from sprint_planning_env.server.tasks import TASK_REGISTRY
+try:
+    from sprint_planning_env.models import SprintAction, SprintObservation
+    from sprint_planning_env.server.environment import SprintBoardEnvironment
+    from sprint_planning_env.server.tasks import TASK_REGISTRY
+except ModuleNotFoundError:
+    from models import SprintAction, SprintObservation
+    from server.environment import SprintBoardEnvironment
+    from server.tasks import TASK_REGISTRY
 
 logger = logging.getLogger(__name__)
 

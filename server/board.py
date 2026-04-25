@@ -18,9 +18,14 @@ import copy
 import logging
 from typing import Dict, List, Any, Optional, Set, Tuple
 
-from sprint_planning_env.server.tasks import (
-    STORY_POOL, TEAM_MEMBERS, VELOCITY_HISTORY, EPIC_POOL, BUG_BACKLOG,
-)
+try:
+    from sprint_planning_env.server.tasks import (
+        STORY_POOL, TEAM_MEMBERS, VELOCITY_HISTORY, EPIC_POOL, BUG_BACKLOG,
+    )
+except ModuleNotFoundError:
+    from server.tasks import (
+        STORY_POOL, TEAM_MEMBERS, VELOCITY_HISTORY, EPIC_POOL, BUG_BACKLOG,
+    )
 
 logger = logging.getLogger(__name__)
 
