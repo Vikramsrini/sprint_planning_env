@@ -385,6 +385,7 @@ class ProjectBoard:
         if developer not in self._team:
             return f"ERROR: Developer '{developer}' not found. Team: {list(self._team.keys())}"
         if developer in self._pto_developers:
+            self._assignments[story_id] = developer
             return f"WARNING: {developer} is on PTO this sprint. Assignment saved but risky."
         if story_id not in self._sprint_stories:
             return f"WARNING: {story_id} is not in the sprint yet. Use ADD_TO_SPRINT first."
@@ -423,9 +424,11 @@ class ProjectBoard:
         if story_id not in self._sprint_stories:
             return f"ERROR: {story_id} is not in the sprint."
         self._sprint_stories.discard(story_id)
+        unassigned_note = ""
         if story_id in self._assignments:
-            del self._assignments[story_id]
-        return f"✓ {story_id} removed from sprint."
+            dev = self._assignments.pop(story_id)
+            unassigned_note = f" (assignment to {dev} also removed)"
+        return f"✓ {story_id} removed from sprint.{unassigned_note}"
 
     def flag_risk(self, story_id: str, reason: str) -> str:
         """Flag a story as risky."""

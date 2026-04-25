@@ -249,6 +249,7 @@ class SprintBoardEnvironment(Environment[SprintAction, SprintObservation, Sprint
                 completion_bonus = self._grader_score * 0.5
                 step_reward += completion_bonus
                 self._cumulative_reward += completion_bonus
+                self._cumulative_reward = max(0.0, min(1.0, self._cumulative_reward))
 
         return SprintObservation(
             command_output=output,
