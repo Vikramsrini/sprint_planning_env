@@ -40,7 +40,7 @@ Use this section as a one-screen checklist against common OpenEnv submission cri
 
 | Criterion | Status | Evidence |
 |---|---|---|
-| **OpenEnv protocol compliance** (`reset`, `step`, `state`, `/ws`) | ✅ | `server/environment.py`, `server/app.py`, `openenv.yaml` |
+| **OpenEnv protocol compliance** (`reset`, `step`, `state`, `/ws`) | ✅ | `server/environment.py`, `server/app.py`, `openenv.yaml` (deps set to `openenv-core>=0.2.0`, no upper pin) |
 | **Non-trivial real-world task (Theme #3.1)** | ✅ | 15 sprint-planning scenarios in `server/tasks.py` with easy→hard curriculum |
 | **Reward is rich and hard to game** | ✅ | `server/reward.py` + deterministic board-state grader in `server/grader.py` |
 | **Deterministic, reproducible evaluation** | ✅ | No LLM judge; deterministic graders + committed baseline/training artefacts |
