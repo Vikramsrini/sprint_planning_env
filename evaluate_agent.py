@@ -9,9 +9,30 @@ from sprint_planning_env.agent import run_agent
 
 env = SprintBoardEnvironment()
 
+
+def _fmt_metrics(metrics):
+    return metrics
+
+
+def _fmt_score(obs):
+    return f"{float(getattr(obs, 'reward', 0.0) or 0.0):.3f}"
+
+
+def _fmt_score_initial():
+    return "0.000"
+
 for task_id in TASK_REGISTRY.keys():
     print(f"Evaluating {task_id}")
-    steps = list(run_agent(env, task_id, max_steps=40))
+    steps = list(
+        run_agent(
+            env,
+            task_id,
+            _fmt_metrics,
+            _fmt_score,
+            _fmt_score_initial,
+            max_steps=40,
+        )
+    )
     last_log, metrics, score, step, is_done = steps[-1]
     
     # print final score percentage or reward
