@@ -210,8 +210,6 @@ def train(args: argparse.Namespace) -> None:
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=args.grad_accum,
         num_train_epochs=args.epochs,
-        max_prompt_length=args.max_prompt_length,
-        max_completion_length=args.max_completion_length,
         num_generations=args.num_generations,
         logging_steps=args.logging_steps,
         report_to=[],
