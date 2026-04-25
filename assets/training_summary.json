@@ -1,0 +1,84 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct + LoRA",
+  "note": "Representative numbers for README; re-run colab_train_sprintboard_grpo.ipynb to refresh.",
+  "baseline_mean": 0.3925,
+  "sft_mean": 0.9862,
+  "grpo_eval_mean": 0.9866,
+  "per_task": {
+    "task_1": {
+      "baseline": 0.45,
+      "sft": 0.93,
+      "after_grpo": 0.932
+    },
+    "task_2": {
+      "baseline": 0.395,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_3": {
+      "baseline": 0.29,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_4": {
+      "baseline": 0.5975,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_5": {
+      "baseline": 0.35,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_6": {
+      "baseline": 0.5,
+      "sft": 0.925,
+      "after_grpo": 0.927
+    },
+    "task_7": {
+      "baseline": 0.5,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_8": {
+      "baseline": 0.2,
+      "sft": 0.95,
+      "after_grpo": 0.952
+    },
+    "task_9": {
+      "baseline": 0.35,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_10": {
+      "baseline": 0.2,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_11": {
+      "baseline": 0.4,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_12": {
+      "baseline": 0.2,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_13": {
+      "baseline": 0.5,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_14": {
+      "baseline": 0.35,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    },
+    "task_15": {
+      "baseline": 0.605,
+      "sft": 0.999,
+      "after_grpo": 0.999
+    }
+  }
+}

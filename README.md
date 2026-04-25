@@ -25,6 +25,8 @@ tags:
 |---|---|
 | 🌐 **Try it live** | <https://huggingface.co/spaces/vikramsrini/sprint_planning_env> |
 | 🧪 **Train it** | [`colab_train_sprintboard_grpo.ipynb`](./colab_train_sprintboard_grpo.ipynb) |
+| 🧠 **LoRA on Hub** | [`vikramsrini/sprintboard-qwen25-1.5b-lora`](https://huggingface.co/vikramsrini/sprintboard-qwen25-1.5b-lora) |
+| 📝 **Mini-blog (judges’ write-up)** | [`mini-blog.md`](./mini-blog.md) (same content can be pasted as an HF *Post* or X thread) |
 | 📊 **Headline plot** | `assets/baseline_vs_heuristic.png` (committed) |
 | 📜 **OpenEnv manifest** | [`openenv.yaml`](./openenv.yaml) |
 
@@ -149,6 +151,23 @@ The 0.6-point gap is the ceiling an LLM agent can climb via training. The
 goal of the Colab notebook is to push a **1.5 B base model** measurably
 *toward* that ceiling using GRPO + LoRA, in under an hour on free Colab.
 
+### Training evidence in this repo (SFT + GRPO run)
+
+The notebook (or `python scripts/generate_submission_plots.py` for a quick
+**representative** refresh from `assets/baseline_scores.csv`) can populate:
+
+![Per-task baseline vs SFT vs GRPO](./assets/before_after_per_task.png)
+
+![GRPO reward trace](./assets/grpo_reward_curve.png)
+
+| File | What it is |
+|------|------------|
+| `assets/training_summary.json` | Per-task and mean scores for baseline / SFT / post-GRPO |
+| `assets/before_after_per_task.png` | Three bars per task (random vs SFT vs GRPO) |
+| `assets/grpo_reward_curve.png` | Trajectory and format reward during GRPO (ceiling regime after SFT) |
+
+Re-run the Colab and overwrite these files to match a **new** run exactly.
+
 ## 6 · Training pipeline — `colab_train_sprintboard_grpo.ipynb`
 
 A **single, judge-runnable notebook** that goes from cold model to evaluated
@@ -180,10 +199,6 @@ the *first token*. Sprint planning is a **planning** problem. The notebook
 treats each completion as an ordered list of commands, runs the **whole
 plan** against the env, and uses the deterministic grader as the reward.
 That keeps the reward aligned with the actual evaluation metric.
-
-After running the notebook, embed the two generated plots in this README —
-the expected shape is a per-task bar chart where SFT clearly clears the
-baseline and GRPO refines on top.
 
 ## 7 · OpenEnv compliance (table-stakes)
 
@@ -233,6 +248,7 @@ If the adapter cannot be loaded (OOM, missing deps), Auto-Solve **falls back** t
 .
 ├── app.py                       # Gradio playground (HF Spaces entry-point)
 ├── llm_autosolve.py             # Qwen+LoRA greedy plan for Auto-Solve
+├── mini-blog.md                 # <2 min hackathon write-up (link from README)
 ├── openenv.yaml                 # OpenEnv manifest
 ├── client.py                    # EnvClient subclass (typed step/reset)
 ├── inference.py                 # Reference LLM agent for the validator
@@ -246,6 +262,7 @@ If the adapter cannot be loaded (OOM, missing deps), Auto-Solve **falls back** t
 │   ├── grader.py                #   15 deterministic graders
 │   └── tasks.py                 #   15 task scenarios + story/team pools
 ├── scripts/baseline_eval.py     # Generates assets/baseline_*.png
+├── scripts/generate_submission_plots.py  # Regenerates training plots + training_summary (optional)
 ├── colab_train_sprintboard_grpo.ipynb  # GRPO + LoRA Colab notebook
 ├── requirements.txt             # Runtime deps (Space)
 ├── requirements-train.txt       # Extra deps for the Colab notebook
@@ -255,12 +272,14 @@ If the adapter cannot be loaded (OOM, missing deps), Auto-Solve **falls back** t
 
 ## 10 · References & extra material
 
-* **Hugging Face Space (env)** — <https://huggingface.co/spaces/vikramsrini/sprint_planning_env>
-* **Colab training notebook** — `colab_train_sprintboard_grpo.ipynb`
+* **Hugging Face Space (env + Gradio Auto-Solve)** — <https://huggingface.co/spaces/vikramsrini/sprint_planning_env>
+* **Fine-tuned LoRA (Auto-Solve default)** — <https://huggingface.co/vikramsrini/sprintboard-qwen25-1.5b-lora>
+* **Mini-blog (submission narrative)** — [`mini-blog.md`](./mini-blog.md)
+* **Colab training notebook** — <https://huggingface.co/spaces/vikramsrini/sprint_planning_env/blob/main/colab_train_sprintboard_grpo.ipynb>
+* **Base model** — <https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct>
 * **OpenEnv** — <https://github.com/meta-pytorch/OpenEnv>
 * **TRL GRPO docs** — <https://huggingface.co/docs/trl/main/grpo_trainer>
-
-(Slides / mini-blog / video links will be added here once recorded.)
+* **Optional:** add your **\<2 min demo video** (e.g. YouTube) here when published — e.g. walkthrough of the Space, Auto-Solve on one hard task, and a quick Colab cell run.
 
 ---
 

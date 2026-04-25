@@ -1,36 +1,30 @@
-# Training Reasoning Agents for Agile Sprint Planning ⚡
+# Training LLMs to Plan Sprints: SprintBoard on OpenEnv (under 2 min read)
 
-Project Management is often seen as a "soft skill," but behind every successful sprint is a series of complex, multi-dimensional decisions. Today, we are excited to introduce **SprintBoard**, an OpenEnv-compliant reinforcement learning environment designed to train LLM agents in the art of Agile sprint planning.
+**Theme:** [OpenEnv Hackathon](https://huggingface.co/openenv) · **#3.1 World Modeling — Professional Tasks**  
+**Space:** <https://huggingface.co/spaces/vikramsrini/sprint_planning_env>  
+**Code & notebook:** same repo as the Space, plus [`colab_train_sprintboard_grpo.ipynb`](https://huggingface.co/spaces/vikramsrini/sprint_planning_env/blob/main/colab_train_sprintboard_grpo.ipynb)  
+**Fine-tuned adapter:** [`vikramsrini/sprintboard-qwen25-1.5b-lora`](https://huggingface.co/vikramsrini/sprintboard-qwen25-1.5b-lora)
 
-## The Challenge
-Existing RL benchmarks often focus on games (Chess, Go) or basic tool use. However, real-world professional tasks like sprint planning require:
-1. **Investigation**: Navigating a complex state space (backlogs, team capacities).
-2. **Diagnosis**: Identifying hidden faults (velocity overloads, skill mismatches).
-3. **Multi-step Planning**: Resolving dependencies and balancing workloads over a long horizon.
+## The gap
 
-## Enter SprintBoard
-SprintBoard simulates a high-fidelity project board with 15 distinct tasks ranging from "Easy" (unestimated story grooming) to "Hard" (complex dependency chain resolution). 
+Sprint planning is a **real** partially observable workflow: the agent only sees a **symptom** alert, then must **investigate** a board (backlog, velocity, team) and **edit** a plan with many dependent commands. Random policies land near **0.4** mean grader score on our 15 tasks; a hand-crafted “expert” policy scores **~0.99** — huge headroom for learning.
 
-### Key Innovations:
-- **Deterministic 3-Axis Grading**: We score agents on Investigation (30%), Planning Quality (50%), and Process compliance (20%). No LLM-judges, just pure, reproducible metrics.
-- **Open Action Space**: Agents use free-form text commands (e.g., `ASSIGN US-101 Alice`), forcing them to learn the syntax and semantics of project management tools.
-- **State-of-the-art Training**: Our environment is built for **GRPO (Group Relative Policy Optimization)**, allowing models to "reason" through planning trade-offs.
+## The environment (SprintBoard)
 
-## Training Results
-In our initial experiments using DeepSeek-R1-Distill-Qwen-7B, we observed a significant improvement in planning efficiency. After just a few hundred steps of GRPO training, the agent's ability to resolve "Skill Mismatch" and "Dependency Chain Overload" tasks increased by **42%**.
+* **15 scenarios**, easy → hard, each with a deterministic **3-axis grader** (investigation / planning / process) over **true board state**, not string tricks.  
+* **18 text commands** — no multiple choice; outputs must be valid `LIST_BACKLOG`, `ADD_TO_SPRINT`, …, `FINALIZE_SPRINT` lines.  
+* Built on **OpenEnv** (`reset` / `step` / `state`), HTTP + Gradio, **reward shaping** + terminal grade.
 
-| Metric | Pre-Training | Post-GRPO |
-|--------|--------------|-----------|
-| Avg. Grader Score | 0.42 | 0.81 |
-| Success Rate | 33% | 78% |
-| Efficiency (Steps) | 14.2 | 8.4 |
+## What we trained
 
-## Try it Yourself!
-SprintBoard is open-source and hosted on Hugging Face Spaces. You can manually play the "Scrum Master" role or connect your own RL agent using the OpenEnv API.
+We use **Hugging Face TRL**: **SFT** on expert command traces from the env (`TASKS_COMMANDS`) with the **Qwen2.5 Instruct chat template**, then optional **GRPO** with a **full multi-step rollout** reward (grader on the plan executed in the real env) plus a small format bonus. The base model is **`Qwen/Qwen2.5-1.5B-Instruct`**; we ship a **LoRA** on the Hub.
 
-- HF Space: https://huggingface.co/spaces/vikramsrini/sprint_planning_env
-- Training script: `train_grpo.py`
-- Baseline-vs-trained evaluation script: `evaluate_training.py`
-- Reproducible artifacts are saved under `runs/sprintboard-grpo/artifacts/` and `runs/eval/`
+After SFT, **greedy** eval on the 15 training tasks typically reaches a **~0.98+** mean grader — near the expert ceiling — so GRPO is mostly **stability** at the top, not a second 10× jump.
 
-#OpenEnv #RL #LLM #Agile #SprintPlanning
+## Try it
+
+Open the **Space**: pick a task, use **Auto-Solve (Qwen+LoRA)** to watch the model drive the same **live** `step` loop as in training, or use **manual** commands. Judges can re-run the **Colab** to reproduce metrics and `assets/training_summary.json`.
+
+---
+
+`#OpenEnv` `#SprintBoard` `#TRL` `#GRPO` `#PEFT` `#Agile` `#LLM`
