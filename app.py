@@ -20,7 +20,7 @@ import json
 import threading
 import subprocess
 import time
-from urllib import request, error
+from huggingface_hub import HfApi, SpaceHardware
 
 # Make sure the sprint_planning_env package is importable
 sys.path.insert(0, os.path.dirname(__file__))
@@ -526,41 +526,36 @@ class TrainingManager:
         if not token:
             return False, "HF_TOKEN is missing; cannot submit HF Job."
 
-        payload = {
-            "command": (
-                "pip install -e . && "
-                "pip install -r requirements-train.txt && "
+        api = HfApi(token=token)
+        command = [
+            "bash",
+            "-lc",
+            (
+                "python -m pip install -e . && "
+                "python -m pip install -r requirements-train.txt && "
                 f"python train_grpo.py --model-id {model_id} --output-dir {output_dir} "
                 f"--epochs {epochs} --max-samples {max_samples}"
             ),
-            "flavor": hardware,
-            "env": {"HF_HUB_ENABLE_HF_TRANSFER": "1"},
-        }
-        req = request.Request(
-            "https://huggingface.co/api/jobs",
-            data=json.dumps(payload).encode("utf-8"),
-            method="POST",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
+        ]
+
         try:
-            with request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-        except error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="ignore")
-            return False, f"HF Job create failed ({exc.code}): {detail}"
+            # Use official Hub Jobs API instead of raw HTTP endpoint.
+            job = api.run_job(
+                image="python:3.11",
+                command=command,
+                flavor=SpaceHardware(hardware),
+                env={"HF_HUB_ENABLE_HF_TRANSFER": "1"},
+            )
         except Exception as exc:  # pragma: no cover - defensive path
             return False, f"HF Job create failed: {exc}"
 
-        self._job_id = str(data.get("id") or data.get("job_id") or "")
-        self._job_url = data.get("url") or (f"https://huggingface.co/jobs/{self._job_id}" if self._job_id else None)
+        self._job_id = str(getattr(job, "id", "") or "")
+        self._job_url = getattr(job, "url", None) or (f"https://huggingface.co/jobs/{self._job_id}" if self._job_id else None)
         self._mode = "hf_jobs"
-        self._status = data.get("status", "submitted")
+        self._status = str(getattr(job, "status", "submitted"))
         self._started_at = time.time()
         self._append("Submitted HF Job successfully.")
-        self._append(json.dumps(data, indent=2))
+        self._append(json.dumps(job.__dict__, indent=2, default=str))
         return True, self.render()
 
     def start(
@@ -588,7 +583,10 @@ class TrainingManager:
                 if ok:
                     return msg
                 self._append(msg)
-                self._append("Falling back to local subprocess training.")
+                self._status = "failed(hf_job_submit)"
+                self._mode = "hf_jobs"
+                self._append("HF job submission failed. Local fallback disabled to avoid using non-HF compute.")
+                return self.render()
             return self._start_local(model_id, epochs, max_samples, output_dir)
 
     def refresh(self) -> str:
@@ -607,17 +605,12 @@ class TrainingManager:
             if self._job_id:
                 token = os.getenv("HF_TOKEN", "").strip()
                 if token:
-                    req = request.Request(
-                        f"https://huggingface.co/api/jobs/{self._job_id}",
-                        method="GET",
-                        headers={"Authorization": f"Bearer {token}"},
-                    )
                     try:
-                        with request.urlopen(req, timeout=20) as resp:
-                            data = json.loads(resp.read().decode("utf-8"))
-                        new_status = data.get("status")
+                        api = HfApi(token=token)
+                        data = api.inspect_job(job_id=self._job_id)
+                        new_status = getattr(data, "status", None)
                         if new_status:
-                            self._status = new_status
+                            self._status = str(new_status)
                     except Exception as exc:  # pragma: no cover - network/runtime dependent
                         self._append(f"HF status refresh warning: {exc}")
             return self.render()
