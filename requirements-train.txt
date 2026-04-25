@@ -2,7 +2,8 @@ trl
 transformers
 torch
 datasets
-unsloth
+unsloth>=2026.4.5
+unsloth_zoo>=2026.4.4
 accelerate
 bitsandbytes
 matplotlib
