@@ -501,7 +501,7 @@ class TrainingManager:
                 "python -m pip install -r requirements-train.txt && "
                 f"python train_grpo.py --model-id {model_id} --output-dir {output_dir} "
                 f"--epochs {epochs} --max-samples {max_samples} "
-                "--max-completion-length 96 --num-generations 8 --learning-rate 3e-6"
+                "--max-completion-length 96 --num-generations 4 --learning-rate 3e-6"
             ),
         ]
 
