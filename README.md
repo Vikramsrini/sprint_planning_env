@@ -5,7 +5,7 @@ colorFrom: purple
 colorTo: indigo
 sdk: docker
 app_file: app.py
-pinned: false
+pinned: true
 tags:
   - openenv
   - rl-environment
