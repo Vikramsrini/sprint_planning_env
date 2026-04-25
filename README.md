@@ -263,6 +263,7 @@ If the adapter cannot be loaded (OOM, missing deps), Auto-Solve **falls back** t
 │   └── tasks.py                 #   15 task scenarios + story/team pools
 ├── scripts/baseline_eval.py     # Generates assets/baseline_*.png
 ├── scripts/generate_submission_plots.py  # Regenerates training plots + training_summary (optional)
+├── scripts/publish_blog_to_hub_discussion.py  # Publishes mini-blog as a Space Discussion (needs HF token)
 ├── colab_train_sprintboard_grpo.ipynb  # GRPO + LoRA Colab notebook
 ├── requirements.txt             # Runtime deps (Space)
 ├── requirements-train.txt       # Extra deps for the Colab notebook
@@ -274,7 +275,8 @@ If the adapter cannot be loaded (OOM, missing deps), Auto-Solve **falls back** t
 
 * **Hugging Face Space (env + Gradio Auto-Solve)** — <https://huggingface.co/spaces/vikramsrini/sprint_planning_env>
 * **Fine-tuned LoRA (Auto-Solve default)** — <https://huggingface.co/vikramsrini/sprintboard-qwen25-1.5b-lora>
-* **Mini-blog (submission narrative)** — [`mini-blog.md`](./mini-blog.md)
+* **Mini-blog (submission narrative)** — [`mini-blog.md`](./mini-blog.md) (also on the Hub as a file: <https://huggingface.co/spaces/vikramsrini/sprint_planning_env/blob/main/mini-blog.md>)  
+  * The Hugging Face MCP in Cursor is **read-only**; to open the same text as a **Space Discussion** (visible on the Discussions tab), run `python scripts/publish_blog_to_hub_discussion.py` after `huggingface-cli login` or with `HF_TOKEN` set.
 * **Colab training notebook** — <https://huggingface.co/spaces/vikramsrini/sprint_planning_env/blob/main/colab_train_sprintboard_grpo.ipynb>
 * **Base model** — <https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct>
 * **OpenEnv** — <https://github.com/meta-pytorch/OpenEnv>

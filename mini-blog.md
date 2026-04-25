@@ -2,6 +2,7 @@
 
 **Theme:** [OpenEnv Hackathon](https://huggingface.co/openenv) · **#3.1 World Modeling — Professional Tasks**  
 **Space:** <https://huggingface.co/spaces/vikramsrini/sprint_planning_env>  
+**This post (source on Hub):** <https://huggingface.co/spaces/vikramsrini/sprint_planning_env/blob/main/mini-blog.md>  
 **Code & notebook:** same repo as the Space, plus [`colab_train_sprintboard_grpo.ipynb`](https://huggingface.co/spaces/vikramsrini/sprint_planning_env/blob/main/colab_train_sprintboard_grpo.ipynb)  
 **Fine-tuned adapter:** [`vikramsrini/sprintboard-qwen25-1.5b-lora`](https://huggingface.co/vikramsrini/sprintboard-qwen25-1.5b-lora)
 
