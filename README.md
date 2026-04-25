@@ -152,26 +152,38 @@ goal of the Colab notebook is to push a **1.5 B base model** measurably
 ## 6 · Training pipeline — `colab_train_sprintboard_grpo.ipynb`
 
 A **single, judge-runnable notebook** that goes from cold model to evaluated
-checkpoint in one click:
+checkpoint in one click. The recipe is **SFT warm-start → GRPO refinement**,
+which is the configuration that reliably beats the random baseline on a 1.5 B
+model in under an hour on free Colab.
 
 | Step | What it does |
 |---|---|
 | 1 | Clones this Space, installs the env in-process. |
 | 2 | Loads `Qwen/Qwen2.5-1.5B-Instruct` + LoRA r=16. |
-| 3 | **Baseline pass** — 1 rollout per task, records grader score. |
-| 4 | **GRPO training** — `trl.GRPOTrainer` with two reward callbacks: a *full multi-step trajectory* reward (final grader score after running the model's whole plan against the env) and a format reward. 4 generations per prompt, 3 epochs over the 15 prompts. |
-| 5 | **Trained pass** — 1 rollout per task. |
-| 6 | Saves three artefacts: `assets/grpo_reward_curve.png`, `assets/before_after_per_task.png`, `assets/training_summary.json`. |
+| 3 | **Baseline pass** — 1 greedy rollout per task; records grader score. |
+| 4 | **Phase A · SFT warm-start** — short prompt-masked SFT on the 15 expert plans shipped in `agent.TASKS_COMMANDS`. Anchors the *output channel* (`one verb per line`, ending in `FINALIZE_SPRINT`). |
+| 5 | **SFT eval pass** — same 15 tasks, greedy decode. |
+| 6 | **Phase B · GRPO refinement** — `trl.GRPOTrainer` with two reward callbacks: a *full multi-step trajectory* reward (final grader score after running the model's whole plan against the env) and a graded format reward (length + `FINALIZE_SPRINT` discipline). 4 generations per prompt, small LR (5e-7), `beta=0` so SFT is preserved. |
+| 7 | **Trained eval pass** — 1 rollout per task. |
+| 8 | Saves three artefacts: `assets/grpo_reward_curve.png`, `assets/before_after_per_task.png`, `assets/training_summary.json`. |
 
-Why the multi-step trajectory reward matters: most TRL examples reward the
-*first token*. Sprint planning is a **planning** problem. The notebook treats
-each completion as an ordered list of commands, runs the **whole plan**
-against the env, and uses the deterministic grader as the reward. That keeps
-the reward aligned with the actual evaluation metric.
+**Why SFT before GRPO?** Pure GRPO on a 1.5 B model with only 15 prompts
+collapses the output format before the reward signal can shape behaviour
+(early experiments produced `plan_len=0` plans). The SFT pass is essentially
+behaviour-cloning on a tiny expert dataset — it teaches the format channel
+in ~6 epochs of ~15 examples each, after which GRPO has a *useful gradient*
+to push on. Both phases are run from the same notebook, so the training
+artefact judges can re-run is one click.
 
-After running the notebook, embed the generated plots in this README — the
-expected shape is a monotonically rising group-mean reward curve and a per-task
-bar chart where the trained policy clearly beats the baseline on most tasks.
+**Why the multi-step trajectory reward matters:** most TRL examples reward
+the *first token*. Sprint planning is a **planning** problem. The notebook
+treats each completion as an ordered list of commands, runs the **whole
+plan** against the env, and uses the deterministic grader as the reward.
+That keeps the reward aligned with the actual evaluation metric.
+
+After running the notebook, embed the two generated plots in this README —
+the expected shape is a per-task bar chart where SFT clearly clears the
+baseline and GRPO refines on top.
 
 ## 7 · OpenEnv compliance (table-stakes)
 

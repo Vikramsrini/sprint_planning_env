@@ -1,21 +1,45 @@
-# SprintBoard — Training-only dependencies (used by the Colab notebook).
-# These are NOT needed to host the environment on HF Spaces; only to fine-tune
-# an LLM agent against it.
+# SprintBoard — training-only dependencies (used by colab_train_sprintboard_grpo.ipynb).
+# NOT required to host the HF Space; only to fine-tune with TRL/GRPO + PEFT in-process.
+#
+# Colab: use a FRESH runtime (Runtime → Disconnect and delete runtime), then:
+#   !python -m pip install -U pip setuptools wheel
+#   !python -m pip install -r requirements-train.txt
+#   (restart runtime, then) pip install -e .
+# Do NOT install unsloth / unsloth-zoo in the same environment — their pins for
+# trl (≤0.24), datasets (<4.4), and transformers conflict with modern TRL+GRPO.
 
-# Core training stack
-torch>=2.4
-transformers>=4.46.0
-accelerate>=0.34.0
-peft>=0.13.0
-trl>=0.12.0
+# --- PyTorch (Colab supplies a matching CUDA build; floor is for local CPU/GPU)
+torch>=2.2.0
+
+# --- Hugging Face core (tighten accelerate so PEFT can import clear_device_cache)
+accelerate>=0.34.0,<2.0.0
+transformers>=4.51.0
+safetensors>=0.4.0
+huggingface-hub>=0.24.0
+
+# LoRA
+peft>=0.14.0
+
+# GRPO: TRL new enough to expose GRPOConfig / GRPOTrainer (0.9+; we keep >=0.12)
+trl>=0.12.0,<2.0.0
+
+# Dataset API for GRPO
 datasets>=3.0.0
+
+# Qwen2.5 tokenization / model loads
+sentencepiece>=0.2.0
+protobuf>=4.25.0
+
+# Optional: 4/8-bit loading (skip or comment on CPU if wheel fails)
 bitsandbytes>=0.44.0
 
-# Visualisation / logging
-matplotlib>=3.8
-pandas>=2.0
-tqdm>=4.66
+# Plots & utilities
+matplotlib>=3.8.0
+pandas>=2.0.0
+tqdm>=4.66.0
 
-# Environment
+# SprintBoard / OpenEnv
 openenv-core>=0.2.0
-pydantic>=2.0
+
+# 2.12+ avoids clashes with other Colab packages that expect a modern pydantic 2
+pydantic>=2.12.0,<3.0.0
