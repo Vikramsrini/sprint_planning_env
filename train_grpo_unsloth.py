@@ -40,7 +40,10 @@ except ModuleNotFoundError:
 
 
 SYSTEM_PROMPT = """You are an expert Agile sprint planning agent.
-Return EXACTLY ONE command as plain text (no markdown, no explanation).
+Output a SHORT NUMBERED PLAN of commands, ONE PER LINE, no markdown, no commentary.
+Investigate first (LIST_BACKLOG, VIEW_STORY, VIEW_TEAM, CHECK_DEPS, VIEW_VELOCITY, VIEW_SPRINT, VIEW_BUGS, VIEW_EPIC),
+then act (ESTIMATE, ASSIGN, UNASSIGN, ADD_TO_SPRINT, REMOVE_FROM_SPRINT, SET_PRIORITY, FLAG_RISK, DECOMPOSE),
+and finish with FINALIZE_SPRINT. Use at most 12 steps.
 
 Allowed command verbs:
 LIST_BACKLOG, VIEW_STORY, CHECK_DEPS, VIEW_TEAM, VIEW_VELOCITY, VIEW_SPRINT,
@@ -48,7 +51,12 @@ VIEW_BUGS, VIEW_EPIC, SEARCH_BACKLOG, ESTIMATE, ASSIGN, UNASSIGN,
 ADD_TO_SPRINT, REMOVE_FROM_SPRINT, SET_PRIORITY, FLAG_RISK, DECOMPOSE,
 FINALIZE_SPRINT.
 
-Goal: maximize SprintBoard reward by investigating first, then executing safe planning actions.
+Format example:
+1. LIST_BACKLOG
+2. VIEW_TEAM
+3. ESTIMATE US-101 5
+4. ASSIGN US-101 Alice
+5. FINALIZE_SPRINT
 """
 
 VALID_COMMAND_PREFIXES = {
@@ -100,48 +108,98 @@ def _extract_first_command(raw_completion: Any) -> str:
     return lines[0] if lines else ""
 
 
+_NUMBERED_LINE = re.compile(r"^\s*(?:\d+[\.\)]|[-*])\s*(.+)$")
+_MAX_ROLLOUT_STEPS = 15
+
+
+def _extract_command_sequence(raw_completion: Any) -> List[str]:
+    """Parse a numbered/bulleted plan into a clean command list."""
+    text = _normalize_completion(raw_completion)
+    text = text.strip().strip("`").strip()
+    commands: List[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = _NUMBERED_LINE.match(stripped)
+        candidate = (match.group(1) if match else stripped).strip()
+        if not candidate:
+            continue
+        first_token = candidate.split()[0].upper()
+        if first_token not in VALID_COMMAND_PREFIXES:
+            continue
+        commands.append(candidate)
+        if len(commands) >= _MAX_ROLLOUT_STEPS:
+            break
+    return commands
+
+
 def reward_score_function(prompts, completions, **kwargs) -> List[float]:
-    """Reward generated command by executing it in SprintBoard."""
+    """Reward by rolling out the full command sequence in SprintBoard.
+
+    For each completion we execute its commands sequentially in a fresh env
+    until the env terminates or we exhaust the plan, then return the final
+    grader score (clamped to [0,1]).
+    """
     rewards: List[float] = []
     env = SprintBoardEnvironment()
 
     for prompt, completion in zip(prompts, completions):
         task_id = _extract_task_id(str(prompt))
-        command = _extract_first_command(completion)
-        env.reset(task_id=task_id)
-        result = env.step(SprintAction(command=command))
+        commands = _extract_command_sequence(completion)
+        if not commands:
+            rewards.append(0.0)
+            continue
 
-        reward = float(result.reward or 0.0)
-        if result.done and result.metadata.get("grader_score") is not None:
-            reward = max(reward, float(result.metadata["grader_score"]))
+        env.reset(task_id=task_id)
+        last_reward = 0.0
+        grader_score = None
+        for command in commands:
+            result = env.step(SprintAction(command=command))
+            if result.reward is not None:
+                last_reward = float(result.reward)
+            if result.done:
+                if result.metadata and result.metadata.get("grader_score") is not None:
+                    grader_score = float(result.metadata["grader_score"])
+                break
+
+        reward = grader_score if grader_score is not None else last_reward
         rewards.append(max(0.0, min(1.0, reward)))
 
     return rewards
 
 
 def format_reward_function(prompts, completions, **kwargs) -> List[float]:
-    """Extra reward for syntactically valid command outputs."""
+    """Reward well-formed multi-step plans that end with FINALIZE_SPRINT."""
     rewards: List[float] = []
     for completion in completions:
-        command = _extract_first_command(completion).upper()
-        command_prefix = command.split()[0] if command else ""
-        rewards.append(0.10 if command_prefix in VALID_COMMAND_PREFIXES else 0.0)
+        commands = _extract_command_sequence(completion)
+        if not commands:
+            rewards.append(0.0)
+            continue
+        score = 0.05
+        if 2 <= len(commands) <= 12:
+            score += 0.05
+        if commands[-1].split()[0].upper() == "FINALIZE_SPRINT":
+            score += 0.05
+        rewards.append(min(0.15, score))
     return rewards
 
 
 def build_training_dataset(task_ids: List[str], max_samples: int) -> Dataset:
-    prompts = []
-    for task_id in task_ids:
-        prompts.append(
-            (
-                f"{SYSTEM_PROMPT}\n"
-                f"TASK_ID: {task_id}\n"
-                "You are at the beginning of the episode. "
-                "What is your next best command?"
+    prompts: List[str] = []
+    while len(prompts) < max_samples:
+        for task_id in task_ids:
+            prompts.append(
+                (
+                    f"{SYSTEM_PROMPT}\n"
+                    f"TASK_ID: {task_id}\n"
+                    "Write the full numbered plan of commands needed to resolve the sprint. "
+                    "Stop after FINALIZE_SPRINT."
+                )
             )
-        )
-        if len(prompts) >= max_samples:
-            break
+            if len(prompts) >= max_samples:
+                break
     return Dataset.from_dict({"prompt": prompts})
 
 
@@ -327,9 +385,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grad-accum", type=int, default=4)
     parser.add_argument("--num-generations", type=int, default=4)
     parser.add_argument("--learning-rate", type=float, default=5e-6)
-    parser.add_argument("--max-samples", type=int, default=15)
+    parser.add_argument("--max-samples", type=int, default=60)
     parser.add_argument("--max-prompt-length", type=int, default=512)
-    parser.add_argument("--max-completion-length", type=int, default=64)
+    parser.add_argument("--max-completion-length", type=int, default=256)
     parser.add_argument("--logging-steps", type=int, default=1)
 
     # Unsloth-specific arguments
