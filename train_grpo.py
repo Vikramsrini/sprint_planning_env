@@ -1,5 +1,6 @@
 import argparse
 import json
+import math
 import os
 import re
 import sys
@@ -203,6 +204,9 @@ def train(args: argparse.Namespace) -> None:
 
     task_ids = list_task_ids()
     dataset = build_training_dataset(task_ids=task_ids, max_samples=args.max_samples)
+    effective_batch_size = max(1, args.batch_size * args.grad_accum)
+    inferred_max_steps = max(1, math.ceil((len(dataset) * args.epochs) / effective_batch_size))
+    max_steps = args.max_steps if args.max_steps > 0 else inferred_max_steps
 
     training_args = GRPOConfig(
         output_dir=args.output_dir,
@@ -214,6 +218,7 @@ def train(args: argparse.Namespace) -> None:
         max_completion_length=args.max_completion_length,
         max_prompt_length=args.max_prompt_length,
         logging_steps=args.logging_steps,
+        max_steps=max_steps,
         report_to=[],
         dataloader_num_workers=0,  # Disable multiprocessing to fix dill pickling issues
     )
@@ -225,7 +230,10 @@ def train(args: argparse.Namespace) -> None:
         train_dataset=dataset,
     )
 
-    print(f"Starting GRPO training for SprintBoard using {len(dataset)} prompts...")
+    print(
+        "Starting GRPO training for SprintBoard "
+        f"using {len(dataset)} prompts (max_steps={max_steps})..."
+    )
     trainer.train()
     trainer.save_model(os.path.join(args.output_dir, "checkpoint-final"))
     save_training_artifacts(trainer, args.output_dir)
@@ -245,6 +253,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-prompt-length", type=int, default=512)
     parser.add_argument("--max-completion-length", type=int, default=64)
     parser.add_argument("--logging-steps", type=int, default=1)
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=-1,
+        help="Override trainer max steps; set >0 to force, -1 to auto-infer.",
+    )
     return parser.parse_args()
 
 
