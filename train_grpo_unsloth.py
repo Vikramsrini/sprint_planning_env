@@ -235,14 +235,28 @@ def load_unsloth_model(model_id: str, args: argparse.Namespace):
         dtype=torch_dtype,
     )
 
-    # Apply LoRA adapters
+    # Build LoRA target modules from the loaded model itself (no blind fallback).
+    module_leaf_names = {name.rsplit(".", 1)[-1] for name, _ in model.named_modules()}
+    preferred_order = [
+        "q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj",
+        # Alternate names seen in some architectures
+        "query_key_value", "out_proj", "fc1", "fc2", "dense", "dense_h_to_4h", "dense_4h_to_h",
+    ]
+    target_modules = [name for name in preferred_order if name in module_leaf_names]
+    if not target_modules:
+        sample_names = sorted(module_leaf_names)[:80]
+        raise RuntimeError(
+            "Could not find compatible LoRA target module names in loaded model. "
+            f"Sample discovered module names: {sample_names}"
+        )
+
+    print(f"Resolved LoRA target_modules={target_modules}")
     model = FastLanguageModel.get_peft_model(
         model,
         r=args.lora_rank,
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
-        # "all-linear" is more robust across architecture naming differences.
-        target_modules=["all-linear"],
+        target_modules=target_modules,
         use_gradient_checkpointing="unsloth",
         random_state=3407,
         use_rslora=False,  # Use standard LoRA
