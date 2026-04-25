@@ -1,0 +1,16 @@
+task_id,name,difficulty,random_policy,heuristic_bot
+task_1,Unestimated Stories,easy,0.45,0.93
+task_2,Developer Overload,easy,0.395,0.999
+task_3,Missing Dependency,easy,0.29,0.999
+task_4,Scope Creep Risk,easy,0.5975,0.999
+task_5,Wrong Priority Alignment,easy,0.35,0.999
+task_6,Velocity Overload,medium,0.5,0.925
+task_7,Skill Mismatch,medium,0.5,0.999
+task_8,Epic Decomposition,medium,0.2,0.999
+task_9,Priority Conflict Resolution,medium,0.35,0.999
+task_10,Tech Debt Balance,medium,0.2,0.999
+task_11,Compound: Dependency Chain + Overload,hard,0.4,0.999
+task_12,Compound: PTO + Velocity Drop,hard,0.2,0.999
+task_13,Compound: Cross-Team + Skill Gap,hard,0.5,0.999
+task_14,Sprint Rescue (5 Problems),hard,0.35,0.999
+task_15,Full Sprint Planning from Scratch,hard,0.605,0.999

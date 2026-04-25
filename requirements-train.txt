@@ -1,0 +1,21 @@
+# SprintBoard — Training-only dependencies (used by the Colab notebook).
+# These are NOT needed to host the environment on HF Spaces; only to fine-tune
+# an LLM agent against it.
+
+# Core training stack
+torch>=2.4
+transformers>=4.46.0
+accelerate>=0.34.0
+peft>=0.13.0
+trl>=0.12.0
+datasets>=3.0.0
+bitsandbytes>=0.44.0
+
+# Visualisation / logging
+matplotlib>=3.8
+pandas>=2.0
+tqdm>=4.66
+
+# Environment
+openenv-core>=0.2.0
+pydantic>=2.0

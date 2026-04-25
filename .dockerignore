@@ -7,3 +7,15 @@ dist/
 build/
 .eggs/
 .pytest_cache/
+.venv/
+venv/
+
+# Training-only artefacts (not needed by the Spaces image)
+requirements-train.txt
+colab_train_sprintboard_grpo*.ipynb
+sprintboard_qwen_lora/
+sprintboard_qwen/
+checkpoints/
+wandb/
+.git/
+

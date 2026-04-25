@@ -16,3 +16,13 @@ build/
 *.egg-info/
 .DS_Store
 .gemini/
+
+# Training artefacts produced by the Colab notebook.
+# Plots & CSVs in assets/ are intentionally tracked; large weights are not.
+sprintboard_qwen_lora/
+sprintboard_qwen/
+checkpoints/
+*.bin
+*.safetensors
+wandb/
+
