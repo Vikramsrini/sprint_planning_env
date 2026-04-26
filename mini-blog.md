@@ -8,7 +8,7 @@
 
 ## The gap
 
-Sprint planning is a **real** partially observable workflow: the agent only sees a **symptom** alert, then must **investigate** a board (backlog, velocity, team) and **edit** a plan with many dependent commands. Random policies land near **0.4** mean grader score on our 15 tasks; a hand-crafted “expert” policy scores **~0.99** — huge headroom for learning.
+Sprint planning is a **real** partially observable workflow: the agent only sees a **symptom** alert, then must **investigate** a board (backlog, velocity, team) and **edit** a plan with many dependent commands. Random policies land near **0.4** mean grader score on our 15 tasks; a hand-crafted **reference policy** scores **~0.99** — huge headroom for learning.
 
 ## The environment (SprintBoard)
 

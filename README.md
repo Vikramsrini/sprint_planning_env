@@ -166,7 +166,7 @@ Two reference policies, evaluated across all 15 tasks (run yourself with
 | Policy | Mean grader score | What it does |
 |---|---|---|
 | **Random** | **0.39** | Samples from a static command vocabulary — knows nothing about the task. |
-| **Heuristic bot** | **0.99** | Replays a hand-crafted command sequence per task (the upper bound). |
+| **Reference expert policy** | **0.99** | Replays a hand-crafted command sequence per task (the upper bound). |
 
 The 0.6-point gap is the ceiling an LLM agent can climb via training. The
 goal of the Colab notebook is to push a **1.5 B base model** measurably
@@ -258,10 +258,10 @@ a PEFT adapter (same chat template as the training notebook). Configure the Spac
 |----------|---------|---------|
 | `SPRINTBOARD_ADAPTER_ID` | `vikramsrini/sprintboard-qwen25-1.5b-lora` | Hub repo with LoRA weights |
 | `SPRINTBOARD_BASE_MODEL` | `Qwen/Qwen2.5-1.5B-Instruct` | Base causal LM before LoRA |
-| `SPRINTBOARD_AUTOSOLVE` | `llm` | Set to `heuristic` to use the hard-coded expert bot only (no torch) |
+| `SPRINTBOARD_AUTOSOLVE` | `llm` | Set to `heuristic` to use the hard-coded reference policy only (no torch) |
 | `SPRINTBOARD_MAX_PROMPT_TOKENS` | `1024` | Tokenizer truncation for the chat prompt |
 
-If the adapter cannot be loaded (OOM, missing deps), Auto-Solve **falls back** to the heuristic bot and prints a warning in the terminal.
+If the adapter cannot be loaded (OOM, missing deps), Auto-Solve **falls back** to a hard-coded reference policy and prints a warning in the terminal.
 
 ## 9 · Repository layout
 
