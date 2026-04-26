@@ -880,7 +880,7 @@ def build_ui():
         gr.HTML("""
         <div id="header-bar">
             <h1>⚡ SprintBoard</h1>
-            <p>Sprint Planning & Backlog Management · Auto-Solve runs <strong>Qwen2.5 + your LoRA</strong> (see <code>SPRINTBOARD_ADAPTER_ID</code>)</p>
+            <p>Sprint Planning & Backlog Management · Auto-Solve is enabled for this Space</p>
         </div>
         """)
 
