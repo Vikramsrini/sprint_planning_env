@@ -27,7 +27,7 @@ tags:
 | 🧪 **Train it** | [`colab_train_sprintboard_grpo.ipynb`](./colab_train_sprintboard_grpo.ipynb) |
 | 🧠 **LoRA on Hub** | [`vikramsrini/sprintboard-qwen25-1.5b-lora`](https://huggingface.co/vikramsrini/sprintboard-qwen25-1.5b-lora) |
 | 📝 **Mini-blog (judges’ write-up)** | [`mini-blog.md`](./mini-blog.md) (same content can be pasted as an HF *Post* or X thread) |
-| 📊 **Headline plot** | `assets/baseline_vs_heuristic.png` (committed) |
+| 📊 **Headline plot** | `assets/before_after_per_task.png` (baseline vs SFT vs GRPO) |
 | 📜 **OpenEnv manifest** | [`openenv.yaml`](./openenv.yaml) |
 
 OpenEnv Hackathon · India 2026 · Theme **#3.1 World Modeling — Professional Tasks**
@@ -135,21 +135,15 @@ keyword matches in the action history. This is what makes the reward hard to
 hack — see `tests/test_reward_hacking.py` for adversarial cases the env
 already resists.
 
-## 5 · Headline result — there's real headroom to learn
+## 5 · Headline result — baseline vs SFT + GRPO
 
-Two reference policies, evaluated across all 15 tasks (run yourself with
-`python -m scripts.baseline_eval`):
+Across the 15 tasks, the key comparison is baseline random policy vs the
+trained model pipeline (SFT warm-start + GRPO refinement). In the committed
+summary (`assets/training_summary.json`), means are:
 
-![Random vs heuristic baselines](./assets/baseline_vs_heuristic.png)
-
-| Policy | Mean grader score | What it does |
-|---|---|---|
-| **Random** | **0.39** | Samples from a static command vocabulary — knows nothing about the task. |
-| **Reference expert policy** | **0.99** | Replays a hand-crafted command sequence per task (the upper bound). |
-
-The 0.6-point gap is the ceiling an LLM agent can climb via training. The
-goal of the Colab notebook is to push a **1.5 B base model** measurably
-*toward* that ceiling using GRPO + LoRA, in under an hour on free Colab.
+- baseline: **0.3925**
+- after SFT: **0.9862**
+- after GRPO: **0.9866**
 
 ### Training evidence in this repo (SFT + GRPO run)
 
@@ -163,7 +157,7 @@ The notebook (or `python scripts/generate_submission_plots.py` for a quick
 | File | What it is |
 |------|------------|
 | `assets/training_summary.json` | Per-task and mean scores for baseline / SFT / post-GRPO |
-| `assets/before_after_per_task.png` | Three bars per task (random vs SFT vs GRPO) |
+| `assets/before_after_per_task.png` | Three bars per task (baseline random vs SFT vs GRPO) |
 | `assets/grpo_reward_curve.png` | Trajectory and format reward during GRPO (ceiling regime after SFT) |
 
 Re-run the Colab and overwrite these files to match a **new** run exactly.
