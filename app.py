@@ -1007,6 +1007,32 @@ def build_ui():
                     elem_id="sprint-manifest",
                 )
 
+                # Command Reference
+                gr.HTML("""
+                <div class='section-header' style='margin-top:16px;'>📖 Command Reference</div>
+                <div class='cmd-ref-block'>
+                    <div class='cmd-category'>Investigation</div>
+                    <div><code>LIST_BACKLOG</code></div>
+                    <div><code>VIEW_STORY  &lt;id&gt;</code></div>
+                    <div><code>CHECK_DEPS  &lt;id&gt;</code></div>
+                    <div><code>VIEW_TEAM</code></div>
+                    <div><code>VIEW_VELOCITY</code></div>
+                    <div><code>VIEW_SPRINT</code></div>
+                    <div><code>VIEW_BUGS</code></div>
+                    <div><code>VIEW_EPIC   &lt;id&gt;</code></div>
+                    <div><code>SEARCH_BACKLOG &lt;kw&gt;</code></div>
+                    <div class='cmd-category' style='margin-top:16px;'>Planning</div>
+                    <div><code>ESTIMATE &lt;id&gt; &lt;pts&gt;</code></div>
+                    <div><code>ASSIGN   &lt;id&gt; &lt;name&gt;</code></div>
+                    <div><code>UNASSIGN &lt;id&gt;</code></div>
+                    <div><code>ADD_TO_SPRINT &lt;id&gt;</code></div>
+                    <div><code>REMOVE_FROM_SPRINT &lt;id&gt;</code></div>
+                    <div><code>SET_PRIORITY &lt;id&gt; P0|P1|P2</code></div>
+                    <div><code>FLAG_RISK &lt;id&gt; &lt;reason&gt;</code></div>
+                    <div><code>FINALIZE_SPRINT</code></div>
+                </div>
+                """)
+
             # ── RIGHT PANEL ────────────────────────────────
             with gr.Column(scale=1, min_width=260):
 
@@ -1051,32 +1077,6 @@ def build_ui():
                     interactive=False,
                     autoscroll=True,
                 )
-
-                # Command Reference
-                gr.HTML("""
-                <div class='section-header' style='margin-top:16px;'>📖 Command Reference</div>
-                <div class='cmd-ref-block'>
-                    <div class='cmd-category'>Investigation</div>
-                    <div><code>LIST_BACKLOG</code></div>
-                    <div><code>VIEW_STORY  &lt;id&gt;</code></div>
-                    <div><code>CHECK_DEPS  &lt;id&gt;</code></div>
-                    <div><code>VIEW_TEAM</code></div>
-                    <div><code>VIEW_VELOCITY</code></div>
-                    <div><code>VIEW_SPRINT</code></div>
-                    <div><code>VIEW_BUGS</code></div>
-                    <div><code>VIEW_EPIC   &lt;id&gt;</code></div>
-                    <div><code>SEARCH_BACKLOG &lt;kw&gt;</code></div>
-                    <div class='cmd-category' style='margin-top:16px;'>Planning</div>
-                    <div><code>ESTIMATE &lt;id&gt; &lt;pts&gt;</code></div>
-                    <div><code>ASSIGN   &lt;id&gt; &lt;name&gt;</code></div>
-                    <div><code>UNASSIGN &lt;id&gt;</code></div>
-                    <div><code>ADD_TO_SPRINT &lt;id&gt;</code></div>
-                    <div><code>REMOVE_FROM_SPRINT &lt;id&gt;</code></div>
-                    <div><code>SET_PRIORITY &lt;id&gt; P0|P1|P2</code></div>
-                    <div><code>FLAG_RISK &lt;id&gt; &lt;reason&gt;</code></div>
-                    <div><code>FINALIZE_SPRINT</code></div>
-                </div>
-                """)
 
         # ── Footer ──
         gr.HTML("""
