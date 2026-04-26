@@ -880,7 +880,7 @@ def build_ui():
         gr.HTML("""
         <div id="header-bar">
             <h1>⚡ SprintBoard</h1>
-            <p>Sprint Planning & Backlog Management · Auto-Solve is enabled for this Space</p>
+            <p>Sprint Planning & Backlog Management · Auto-Solve with Qwen+LoRA</p>
         </div>
         """)
 
