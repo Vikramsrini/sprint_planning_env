@@ -1,31 +1,49 @@
-# Training LLMs to Plan Sprints: SprintBoard on OpenEnv (under 2 min read)
+# SprintBoard: Training LLMs for Real Sprint Planning
 
 **Theme:** [OpenEnv Hackathon](https://huggingface.co/openenv) · **#3.1 World Modeling — Professional Tasks**  
-**Space:** <https://huggingface.co/spaces/vikramsrini/sprint_planning_env>  
-**This post (source on Hub):** <https://huggingface.co/spaces/vikramsrini/sprint_planning_env/blob/main/mini-blog.md>  
-**Code & notebook:** same repo as the Space, plus [`colab_train_sprintboard_grpo.ipynb`](https://huggingface.co/spaces/vikramsrini/sprint_planning_env/blob/main/colab_train_sprintboard_grpo.ipynb)  
-**Fine-tuned adapter:** [`vikramsrini/sprintboard-qwen25-1.5b-lora`](https://huggingface.co/vikramsrini/sprintboard-qwen25-1.5b-lora)
+**Live environment (HF Space):** <https://huggingface.co/spaces/vikramsrini/sprint_planning_env>  
+**Training notebook:** <https://huggingface.co/spaces/vikramsrini/sprint_planning_env/blob/main/colab_train_sprintboard_grpo.ipynb>  
+**Trained adapter:** <https://huggingface.co/vikramsrini/sprintboard-qwen25-1.5b-lora>
 
-## The gap
+## Why this environment?
 
-Sprint planning is a **real** partially observable workflow: the agent only sees a **symptom** alert, then must **investigate** a board (backlog, velocity, team) and **edit** a plan with many dependent commands. Random policies land near **0.4** mean grader score on our 15 tasks; a hand-crafted **reference policy** scores **~0.99** — huge headroom for learning.
+Sprint planning looks simple, but in practice it is a partially observable, multi-step reasoning problem:
+- You see symptoms first, not root cause.
+- You must inspect team capacity, dependencies, velocity, and priorities.
+- One wrong change can break multiple constraints.
 
-## The environment (SprintBoard)
+This is exactly the kind of workflow where LLMs need a durable internal world model, not shallow one-shot prompting.
 
-* **15 scenarios**, easy → hard, each with a deterministic **3-axis grader** (investigation / planning / process) over **true board state**, not string tricks.  
-* **18 text commands** — no multiple choice; outputs must be valid `LIST_BACKLOG`, `ADD_TO_SPRINT`, …, `FINALIZE_SPRINT` lines.  
-* Built on **OpenEnv** (`reset` / `step` / `state`), HTTP + Gradio, **reward shaping** + terminal grade.
+## What SprintBoard simulates
 
-## What we trained
+SprintBoard is an OpenEnv-compliant environment where the model acts like a Scrum Master:
+- **15 scenarios** (easy to hard, including compound failures)
+- **18 free-form text commands** (no multiple-choice action list)
+- **Deterministic 3-axis grading** on investigation, planning quality, and process
+- **Board-state-based scoring** (hard to game with keyword tricks)
 
-We use **Hugging Face TRL**: **SFT** on expert command traces from the env (`TASKS_COMMANDS`) with the **Qwen2.5 Instruct chat template**, then optional **GRPO** with a **full multi-step rollout** reward (grader on the plan executed in the real env) plus a small format bonus. The base model is **`Qwen/Qwen2.5-1.5B-Instruct`**; we ship a **LoRA** on the Hub.
+## Training approach
 
-After SFT, **greedy** eval on the 15 training tasks typically reaches a **~0.98+** mean grader — near the expert ceiling — so GRPO is mostly **stability** at the top, not a second 10× jump.
+We train `Qwen/Qwen2.5-1.5B-Instruct` with LoRA using a practical two-phase recipe:
+1. **SFT warm-start** on expert SprintBoard command traces (teaches strict command format and basic policy shape)
+2. **GRPO refinement** with a **multi-step trajectory reward**: generate a full plan, execute it in the live environment, and reward by final grader score (+ format shaping)
 
-## Try it
+This setup keeps training grounded in environment outcomes instead of token-level imitation alone.
 
-Open the **Space**: pick a task, use **Auto-Solve (Qwen+LoRA)** to watch the model drive the same **live** `step` loop as in training, or use **manual** commands. Judges can re-run the **Colab** to reproduce metrics and `assets/training_summary.json`.
+## Results
+
+From committed run artifacts (`assets/training_summary.json`):
+- **Baseline random mean:** `0.3925`
+- **After SFT mean:** `0.9862`
+- **After GRPO mean:** `0.9866`
+
+Takeaway: SFT gives the major jump; GRPO stabilizes and refines policy quality near ceiling.
+
+## Try it yourself
+
+In the Space, pick any task and run **Auto-Solve** to watch end-to-end command execution against the same environment used for training.  
+For reproducibility, run the linked notebook and regenerate the plots/summary artifacts.
 
 ---
 
-`#OpenEnv` `#SprintBoard` `#TRL` `#GRPO` `#PEFT` `#Agile` `#LLM`
+`#OpenEnv` `#WorldModeling` `#RLHF` `#TRL` `#GRPO` `#PEFT` `#LLM` `#Agile`
